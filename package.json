@@ -1,0 +1,29 @@
+{
+  "name": "bus_booking_backend",
+  "version": "1.0.0",
+  "description": "Bookinga",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Shumbusho43/bus_booking_backend.git"
+  },
+  "author": "Querty",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Shumbusho43/bus_booking_backend/issues"
+  },
+  "homepage": "https://github.com/Shumbusho43/bus_booking_backend#readme",
+  "dependencies": {
+    "cookie-parser": "^1.4.5",
+    "cors": "^2.8.5",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "helmet": "^4.6.0",
+    "hpp": "^0.2.3",
+    "pg": "^8.6.0",
+    "xss-clean": "^0.1.1"
+  }
+}
