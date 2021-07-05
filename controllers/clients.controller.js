@@ -109,3 +109,10 @@ exports.verifyClient = async (req, res, next) => {
     }
 
 }
+exports.forgotPassword=async(req,res,next)=>{
+    const {Email_or_telephone}=req.body;
+    client.query(`select * from booking.clients where Email_or_telephone=${Email_or_telephone}`,(err,result)=>{
+        if(err) console.log(err.message)
+        res.json(client)
+    })
+}

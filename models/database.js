@@ -3,7 +3,7 @@ const database='busbooking'
 const client = new Client({
     host: 'localhost',
     database: `${database}`,
-    password: 'password@2001',
+    password: 'kayitare@123',
     user: 'postgres',
     port:5432
 })
