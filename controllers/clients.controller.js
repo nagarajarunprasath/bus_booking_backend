@@ -1,5 +1,8 @@
 const bcrypt = require('bcryptjs');
 const jwt = require("jsonwebtoken");
+const {
+    v4: uuidv4
+} = require('uuid');
 const sendEmail = require("./sendEmail")
 const {
     client
@@ -28,6 +31,9 @@ exports.postingClient = async (req, res) => {
         expiresIn: process.env.ACCESS_TOKEN_LIFE
     })
     const confirmationCode = verificationToken;
+
+    //generating random id
+    const id = uuidv4();
     try {
         const {
             Firstname,
@@ -45,34 +51,33 @@ exports.postingClient = async (req, res) => {
         }
         const salt = 10;
         const hashedPass = await bcrypt.hash(`${Password}`, salt);
-        const query = `INSERT INTO booking.clients(firstname,lastname,email_or_telephone,gender,password,confirmationCode) VALUES('${Firstname}','${Lastname}','${Email_or_telephone}','${Gender}','${hashedPass}','${confirmationCode}')`;
-        client.query(`${query}`, (error, result) => {
+        const query = `INSERT INTO booking.clients(clientid,firstname,lastname,email_or_telephone,gender,password,confirmationCode) VALUES('${id}','${Firstname}','${Lastname}','${Email_or_telephone}','${Gender}','${hashedPass}','${confirmationCode}')`;
+        client.query(`${query}`, async (error, result) => {
             if (error) {
-                console.log(error.message);
-                return res.send("email or telephone  is used");
-            }
-        })
-        try {
-            // Step 3 - Email the user a unique verification link
-            const url = `http://localhost:2500/api/v1/client/verify/${verificationToken}`
-            const message = `
+                return res.json("email or telephone  is used");
+            } else {
+                try {
+                    // Step 3 - Email the user a unique verification link
+                    const url = `http://localhost:2500/api/v1/client/verify/${verificationToken}`
+                    const message = `
         <h1>Email verification</h1>
         <p> Thank you for joining.Please confirm your email by clicking on the following link </p>
         <a href=${url} clicktracking=off>Click here</a>
         `
-            await sendEmail({
-                to: req.body.Email_or_telephone,
-                subject: "Verify account",
-                text: message
-            })
-            res.status(201).json({
-                success: true,
-                message: "Client registered successfully. Please check your email or telehone"
-            })
-        } catch (error) {
-            console.log(error)
-        }
-
+                    await sendEmail({
+                        to: req.body.Email_or_telephone,
+                        subject: "Verify account",
+                        text: message
+                    })
+                    return res.status(201).json({
+                        success: true,
+                        message: "Client registered successfully. Please check your email or telephone"
+                    })
+                } catch (error) {
+                    console.log(error)
+                }
+            }
+        })
     } catch (error) {
         console.log(error)
     }
