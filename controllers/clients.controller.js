@@ -104,8 +104,8 @@ exports.verifyClient = async (req, res, next) => {
                 return res.json("You can now login");
             }
         })
-    } catch (err) {
-        console.log(err);
+    } catch (error) {
+        console.log(error);
     }
 
 }
