@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const crypto=require("crypto");
 const jwt = require("jsonwebtoken");
 const {
     v4: uuidv4
@@ -108,4 +109,38 @@ exports.verifyClient = async (req, res, next) => {
         console.log(error);
     }
 
+}
+exports.forgotPassword=async(req,res,next)=>{
+    const {Email_or_telephone}=req.body;
+    try {
+        const user = await client.query(`select * from booking.clients where email_or_telephone='${Email_or_telephone}'`)
+        if (user.rows.length < 1) {
+            return res.json({ success: false, message: "No user with such Email" });
+        }
+        let resetToken = crypto.randomBytes(20).toString("hex");
+        let resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+        let resetPasswordExpire = Date.now() + 10 * (60 * 1000);
+        client.query(`UPDATE booking.clients set resetpasswordexpires='${resetPasswordExpire}'where email_or_telephone='${Email_or_telephone}'`);
+        const resetUrl = `https://bookinga.netlify.app/pwdreset/?txy=${resetToken}`;
+        const message=`
+        <h2>you have requested to reset your password</h2>
+        <h4>Go to this link to reset your password</h4>
+        <a href=${resetUrl}>${resetUrl}</a>
+        `
+        try {
+            await sendEmail({
+                to:Email_or_telephone,
+                subject:"password reset token",
+                message
+            })
+            res.json({success:true,message:"visit your E-mail to resetPassword"}).status(200)
+            client.query(`UPDATE booking.clients set resetpasswordexpires=${null},resetpasswordtoken=${null}`);
+        } catch (error) {
+            console.log(error);
+        }
+    } catch (error) {
+        console.log(error);
+        res.json({success:false,message:error.message})
+        client.query(`UPDATE booking.clients set resetpasswordexpires=${null},resetpasswordtoken=${null}`);
+    }
 }
