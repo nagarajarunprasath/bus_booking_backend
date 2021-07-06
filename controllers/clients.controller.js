@@ -24,17 +24,17 @@ exports.gettingClients = (req, res) => {
 
 //registering clients
 exports.postingClient = async (req, res) => {
-    //gereting token
-    const verificationToken = await jwt.sign({
-        email: req.body.Email_or_telephone
-    }, process.env.EMAIL_VERIFICATION_SECRET, {
-        expiresIn: process.env.ACCESS_TOKEN_LIFE
-    })
-    const confirmationCode = verificationToken;
-
-    //generating random id
-    const id = uuidv4();
     try {
+        //gereting token
+        const verificationToken = await jwt.sign({
+            email: req.body.Email_or_telephone
+        }, process.env.EMAIL_VERIFICATION_SECRET, {
+            expiresIn: process.env.ACCESS_TOKEN_LIFE
+        })
+        const confirmationCode = verificationToken;
+    
+        //generating random id
+        const id = uuidv4();
         const {
             Firstname,
             Lastname,
