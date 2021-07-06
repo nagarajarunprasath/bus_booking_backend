@@ -52,7 +52,7 @@ exports.postingClient = async (req, res) => {
         const salt = 10;
         const hashedPass = await bcrypt.hash(`${Password}`, salt);
         const query = `INSERT INTO booking.clients(clientid,firstname,lastname,email_or_telephone,gender,password,confirmationCode) VALUES('${id}','${Firstname}','${Lastname}','${Email_or_telephone}','${Gender}','${hashedPass}','${confirmationCode}')`;
-        client.query(`${query}`, async (error, result) => {
+        client.query(`${query}`, (error, result) => {
             if (error) {
                 return res.json("email or telephone  is used");
             } else {
@@ -64,7 +64,7 @@ exports.postingClient = async (req, res) => {
         <p> Thank you for joining.Please confirm your email by clicking on the following link </p>
         <a href=${url} clicktracking=off>Click here</a>
         `
-                    await sendEmail({
+                    sendEmail({
                         to: req.body.Email_or_telephone,
                         subject: "Verify account",
                         text: message
