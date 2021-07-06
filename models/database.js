@@ -1,14 +1,16 @@
-const {Client} = require('pg');
-const database='busbooking'
+const dotenv = require("dotenv");
+dotenv.config();
+const {
+    Client
+} = require('pg');
+const env = process.env;
+const devConfig = `postgresql://${env.PG_USER}:${env.PG_PASSWORD}@${env.PG_HOST}:${env.PG_PORT}/${env.PG_DATABASE}`;
+const prodConfig = process.env.DATABASE_URL //coming from heroku addons
 const client = new Client({
-    host: 'localhost',
-    database: `${database}`,
-    password: 'password@2001',
-    user: 'postgres',
-    port:5432
-})
-const connection = client.connect();
+    connectionString: env.NODE_ENV === 'production' ? prodConfig : devConfig
+});
+const connection = client.connect(); //connecting
 if (connection) {
-    console.log(`connected to database "${database}"`);
+    console.log(`connected to database`);
 }
 module.exports.client = client;
