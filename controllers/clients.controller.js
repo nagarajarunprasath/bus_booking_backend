@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const crypto=require("crypto");
 const jwt = require("jsonwebtoken");
 const {
     v4: uuidv4
@@ -24,17 +25,17 @@ exports.gettingClients = (req, res) => {
 
 //registering clients
 exports.postingClient = async (req, res) => {
-    //gereting token
-    const verificationToken = await jwt.sign({
-        email: req.body.Email_or_telephone
-    }, process.env.EMAIL_VERIFICATION_SECRET, {
-        expiresIn: process.env.ACCESS_TOKEN_LIFE
-    })
-    const confirmationCode = verificationToken;
-
-    //generating random id
-    const id = uuidv4();
     try {
+        //gereting token
+        const verificationToken = await jwt.sign({
+            email: req.body.Email_or_telephone
+        }, process.env.EMAIL_VERIFICATION_SECRET, {
+            expiresIn: process.env.ACCESS_TOKEN_LIFE
+        })
+        const confirmationCode = verificationToken;
+    
+        //generating random id
+        const id = uuidv4();
         const {
             Firstname,
             Lastname,
@@ -52,7 +53,7 @@ exports.postingClient = async (req, res) => {
         const salt = 10;
         const hashedPass = await bcrypt.hash(`${Password}`, salt);
         const query = `INSERT INTO booking.clients(clientid,firstname,lastname,email_or_telephone,gender,password,confirmationCode) VALUES('${id}','${Firstname}','${Lastname}','${Email_or_telephone}','${Gender}','${hashedPass}','${confirmationCode}')`;
-        client.query(`${query}`, async (error, result) => {
+        client.query(`${query}`, (error, result) => {
             if (error) {
                 return res.json("email or telephone  is used");
             } else {
@@ -64,7 +65,7 @@ exports.postingClient = async (req, res) => {
         <p> Thank you for joining.Please confirm your email by clicking on the following link </p>
         <a href=${url} clicktracking=off>Click here</a>
         `
-                    await sendEmail({
+                    sendEmail({
                         to: req.body.Email_or_telephone,
                         subject: "Verify account",
                         text: message
@@ -104,15 +105,42 @@ exports.verifyClient = async (req, res, next) => {
                 return res.json("You can now login");
             }
         })
-    } catch (err) {
-        console.log(err);
+    } catch (error) {
+        console.log(error);
     }
 
 }
 exports.forgotPassword=async(req,res,next)=>{
     const {Email_or_telephone}=req.body;
-    client.query(`select * from booking.clients where Email_or_telephone=${Email_or_telephone}`,(err,result)=>{
-        if(err) console.log(err.message)
-        res.json(client)
-    })
+    try {
+        const user = await client.query(`select * from booking.clients where email_or_telephone='${Email_or_telephone}'`)
+        if (user.rows.length < 1) {
+            return res.json({ success: false, message: "No user with such Email" });
+        }
+        let resetToken = crypto.randomBytes(20).toString("hex");
+        let resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+        let resetPasswordExpire = Date.now() + 10 * (60 * 1000);
+        client.query(`UPDATE booking.clients set resetpasswordexpires='${resetPasswordExpire}'where email_or_telephone='${Email_or_telephone}'`);
+        const resetUrl = `https://bookinga.netlify.app/pwdreset/?txy=${resetToken}`;
+        const message=`
+        <h2>you have requested to reset your password</h2>
+        <h4>Go to this link to reset your password</h4>
+        <a href=${resetUrl}>${resetUrl}</a>
+        `
+        try {
+            await sendEmail({
+                to:Email_or_telephone,
+                subject:"password reset token",
+                message
+            })
+            res.json({success:true,message:"visit your E-mail to resetPassword"}).status(200)
+            client.query(`UPDATE booking.clients set resetpasswordexpires=${null},resetpasswordtoken=${null}`);
+        } catch (error) {
+            console.log(error);
+        }
+    } catch (error) {
+        console.log(error);
+        res.json({success:false,message:error.message})
+        client.query(`UPDATE booking.clients set resetpasswordexpires=${null},resetpasswordtoken=${null}`);
+    }
 }

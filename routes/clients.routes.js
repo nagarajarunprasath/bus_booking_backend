@@ -2,7 +2,8 @@ const express = require('express');
 const {
     gettingClients,
     postingClient,
-    verifyClient
+    verifyClient,
+    forgotPassword
 } = require('../controllers/clients.controller.js');
 const routers = express.Router();
 routers.route("/")
@@ -10,4 +11,5 @@ routers.route("/")
     .post(postingClient)
 routers.route('/verify/:verificationToken')
 .get(verifyClient)
+routers.route("/forgotPassword").post(forgotPassword)
 module.exports.clientRoutes = routers;
