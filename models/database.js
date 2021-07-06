@@ -10,9 +10,11 @@ const devConfig =new Client({
     password: 'password@2001',
     user: 'postgres',
     port: 5432,
-    dialectOptions: {
-        ssl: true
-    }
+   dialectOptions: {
+       ssl: {
+           require: 'true'
+       }
+   }
 })
 const prodConfig = ({connectionString: process.env.DATABASE_URL })//coming from heroku addons
  const client = new Client(
