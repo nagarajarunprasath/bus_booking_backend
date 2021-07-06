@@ -11,3 +11,4 @@ const connection = client.connect();
 if (connection) {
     console.log(`connected to database "${database}"`);
 }
+module.exports.client = client;
