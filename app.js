@@ -1,9 +1,10 @@
 const express = require('express');
-
+const swaggerJsDoc = require('swagger-jsdoc');
+const swaggerUi = require("swagger-ui-express");
 //routes
 const {
     clientRoutes
-} = require("./routes/clients.routes");
+} = require("./routes/clients/clients.routes");
 //for security
 const helmet = require("helmet");
 const xss = require("xss-clean");
@@ -36,8 +37,39 @@ app.use(xss());
 //prevent http param pollution
 app.use(hpp());
 
+//documentation
+const swaggerOptions = {
+    swaggerDefinition: {
+        info: {
+            version: '1.0.0',
+            title: 'Bus booking APIs',
+            description: 'Documantaion of all bus booking APIs',
+            contact: {
+                name: "Querty group",
+                email: "quertygroup0@gmail.com"
+            },
+            servers: ['http://localhost:2500']
+        },
+        schemes: [process.env.NODE_ENV === "production" ? "https" : "http"],
+        securityDefinitions: {
+            bearerAuth: {
+                type: "apiKey",
+                name: "Authorization",
+                scheme: "bearer",
+                in: "header",
+            }
+        }
+    },
+    apis: ['./routes/**/*.js']
+}
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs, false, {
+    docExpansion: "none"
+}));
+
 //routes
 app.use('/api/v1/client', clientRoutes);
+
 app.listen(port, () => {
     console.log(`App listening on port ${port}!`);
 });

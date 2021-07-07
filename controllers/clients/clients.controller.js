@@ -4,10 +4,10 @@ const jwt = require("jsonwebtoken");
 const {
     v4: uuidv4
 } = require('uuid');
-const sendEmail = require("./sendEmail")
+const sendEmail = require("../sendEmail")
 const {
     client
-} = require('../models/database');
+} = require('../../models/database');
 exports.gettingClients = (req, res) => {
     try {
         client.query('SELECT * FROM booking.clients', (err, result) => {
@@ -90,11 +90,12 @@ exports.postingClient = async (req, res) => {
 exports.verifyClient = async (req, res, next) => {
     try {
         const confirmationCode = req.params.verificationToken
+        console.log(confirmationCode);
         client.query(`SELECT * FROM booking.clients WHERE confirmationcode='${confirmationCode}'`, (error, result) => {
             if (error) {
                 console.log(error);
             } else if (result.rows.length == 0) {
-                return res.status(400).json("no account found");
+                return res.status(400).json(`no account found with: ${confirmationCode}`);
             } else {
                 console.log(result.rows.length);
                 client.query(`UPDATE booking.clients set verified=true,confirmationcode=null where confirmationcode='${confirmationCode}'`, (error, result) => {
