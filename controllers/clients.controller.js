@@ -115,32 +115,90 @@ exports.forgotPassword=async(req,res,next)=>{
     try {
         const user = await client.query(`select * from booking.clients where email_or_telephone='${Email_or_telephone}'`)
         if (user.rows.length < 1) {
-            return res.json({ success: false, message: "No user with such Email" });
+            return res.json({ success: false, message: "No user with such Email" }).status(404);
         }
         let resetToken = crypto.randomBytes(20).toString("hex");
         let resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
         let resetPasswordExpire = Date.now() + 10 * (60 * 1000);
-        client.query(`UPDATE booking.clients set resetpasswordexpires='${resetPasswordExpire}'where email_or_telephone='${Email_or_telephone}'`);
-        const resetUrl = `https://bookinga.netlify.app/pwdreset/?txy=${resetToken}`;
-        const message=`
-        <h2>you have requested to reset your password</h2>
-        <h4>Go to this link to reset your password</h4>
-        <a href=${resetUrl}>${resetUrl}</a>
-        `
-        try {
-            await sendEmail({
-                to:Email_or_telephone,
-                subject:"password reset token",
-                message
-            })
-            res.json({success:true,message:"visit your E-mail to resetPassword"}).status(200)
-            client.query(`UPDATE booking.clients set resetpasswordexpires=${null},resetpasswordtoken=${null}`);
-        } catch (error) {
-            console.log(error);
+        let update = client.query(`UPDATE booking.clients set resetpasswordtoken='${resetPasswordToken}' where email_or_telephone='kayitareaudax123@gmail.com'`,(err,resp)=>{
+            if(err){
+                console.log(err);
+            }
+            const resetUrl = `https://bookinga.netlify.app/pwdreset/?txy=${resetToken}`
+            const message = `
+         <h2>you have requested a password request</h2>
+         <h5>follow this link to reset</h5>
+         <a href=${resetUrl}>${resetUrl}</a>
+         `
+            res.json({ success: true, message: "email sent" }).status(200);
+            try {
+                sendEmail({
+                    to: Email_or_telephone,
+                    subject: 'reset password Request',
+                    text: message
+                })
+            } catch (error) {
+                client.query("update booking.clients set resetpasswordtokne='',resetpasswordexpire=''");
+            }
+         });
+        
         }
+         catch(error){
+             console.log(error);
+         }
+}
+exports.resetPasssword=async(req,res,next)=>{
+    const {password,comfirmpassword}=req.body;
+    try {
+        const resetPasswordToken=crypto.createHash("sha256").update(req.params.resetToken).digest("hex");
+        await client.query(`select * from booking.clients where resetpasswordtoken = '${resetPasswordToken}'`,(err,resp)=>{
+            if(resp.rows.length<1){
+             res.json({success:false,message:"invalid token"}).status(404);
+            }
+            else{
+                client.query(`update booking.clients set password='${password}',resetpasswordtoken=${null},resetpasswordexpire=${null}`, (err, result) => {
+                    if (err) res.json({ success: false, message: err.message }).status(400)
+                    return res.json({ success: true, message: "password updated succesfully" }).status(201);
+                })
+            }
+        })
     } catch (error) {
         console.log(error);
-        res.json({success:false,message:error.message})
-        client.query(`UPDATE booking.clients set resetpasswordexpires=${null},resetpasswordtoken=${null}`);
+    }
+}
+//@desc delete client
+//@routes get /api/v1/auth/client
+exports.deleteClient=async(req,res,next)=>{
+    try {
+        await client.query(`Delete from booking.clients where clientId='${req.params.id}'`, (err, resp) => {
+            if (err) {
+                console.log(err);
+                return res.json({ success: false, message: "unable to delete" }).status(400);
+            }
+            res.json({ success: true, message: "user deleted succesfully" }).status(200);
+        })
+    } catch (error) {
+        res.json({success:false,message:error.message}).status(400);
+    }
+}
+//@desc update your info
+//@routes get /api/v1/auth/client/
+//access private
+exports.updateClient=async(req,res,next)=>{
+    const {
+        Firstname,
+        Lastname,
+        Email_or_telephone,
+        Gender,
+    } = req.body
+    try {
+        await client.query(`UPDATE booking.clients set firstname='${Firstname}',lastname='${Lastname}',email_or_telephone='${Email_or_telephone}',Gender='${Gender}'`,(err,resp)=>{
+            if(err){
+                return res.json({success:false,message:"Unable to update user"}).status(400);
+            }
+            res.json({success:true,message:"client updated succesfully!!!"}).status(201)
+        })
+    } catch (error) {
+        res.json({success:false,message:error.message});
     }
 }
