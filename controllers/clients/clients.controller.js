@@ -4,10 +4,10 @@ const jwt = require("jsonwebtoken");
 const {
     v4: uuidv4
 } = require('uuid');
-const sendEmail = require("./sendEmail")
+const sendEmail = require("../sendEmail")
 const {
     client
-} = require('../models/database');
+} = require('../../models/database');
 exports.gettingClients = (req, res) => {
     try {
         client.query('SELECT * FROM booking.clients', (err, result) => {
@@ -90,11 +90,12 @@ exports.postingClient = async (req, res) => {
 exports.verifyClient = async (req, res, next) => {
     try {
         const confirmationCode = req.params.verificationToken
+        console.log(confirmationCode);
         client.query(`SELECT * FROM booking.clients WHERE confirmationcode='${confirmationCode}'`, (error, result) => {
             if (error) {
                 console.log(error);
             } else if (result.rows.length == 0) {
-                return res.status(400).json("no account found");
+                return res.status(400).json(`no account found with: ${confirmationCode}`);
             } else {
                 console.log(result.rows.length);
                 client.query(`UPDATE booking.clients set verified=true,confirmationcode=null where confirmationcode='${confirmationCode}'`, (error, result) => {
@@ -120,9 +121,9 @@ exports.forgotPassword=async(req,res,next)=>{
         let resetToken = crypto.randomBytes(20).toString("hex");
         let resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
         let resetPasswordExpire = Date.now() + 10 * (60 * 1000);
-        let update = client.query(`UPDATE booking.clients set resetpasswordtoken='${resetPasswordToken}' where email_or_telephone='kayitareaudax123@gmail.com'`,(err,resp)=>{
+        let update = client.query(`UPDATE booking.clients set resetpasswordtoken='${resetPasswordToken}',resetpasswordexpires=TO_TIMESTAMP('${resetPasswordExpire}') where email_or_telephone='${Email_or_telephone}'`,(err,resp)=>{
             if(err){
-                console.log(err);
+                console.log(err.message);
             }
             const resetUrl = `https://bookinga.netlify.app/pwdreset/?txy=${resetToken}`
             const message = `
@@ -138,7 +139,7 @@ exports.forgotPassword=async(req,res,next)=>{
                     text: message
                 })
             } catch (error) {
-                client.query("update booking.clients set resetpasswordtokne='',resetpasswordexpire=''");
+                client.query("update booking.clients set resetpasswordtoken='',resetpasswordexpires=''");
             }
          });
         
@@ -192,7 +193,7 @@ exports.updateClient=async(req,res,next)=>{
         Gender,
     } = req.body
     try {
-        await client.query(`UPDATE booking.clients set firstname='${Firstname}',lastname='${Lastname}',email_or_telephone='${Email_or_telephone}',Gender='${Gender}'`,(err,resp)=>{
+        await client.query(`UPDATE booking.clients set firstname='${Firstname}',lastname='${Lastname}',email_or_telephone='${Email_or_telephone}',Gender='${Gender}' where clientId='${req.params.id}'`,(err,resp)=>{
             if(err){
                 return res.json({success:false,message:"Unable to update user"}).status(400);
             }
