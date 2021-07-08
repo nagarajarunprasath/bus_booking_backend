@@ -4,9 +4,15 @@ const {
     postingClient,
     verifyClient,
     forgotPassword,
+<<<<<<< HEAD
+    resetPasssword,
+    updateClient,
+    deleteClient
+=======
     loginClient,
     updatePassword,
     clientPhotoUpload
+>>>>>>> 7383018edff0865c72d2e83ecb0842b9a04f43af
 } = require('../../controllers/clients/clients.controller.js');
 const {
     protect
@@ -141,5 +147,96 @@ routers.route('/photo')
        */
     .put(protect, clientPhotoUpload)
 routers.route("/forgotPassword")
+    /**
+         * @swagger
+         * /api/v1/client/forgotpassword:
+         *   post:
+         *     tags:
+         *       - Client
+         *     description: getting password resetToken
+         *     parameters:
+         *       - name: body
+         *         description: Client fields
+         *         in: body
+         *         schema:
+         *           properties:
+         *             Email_or_telephone:
+         *               type: string
+         *     responses:
+         *       200:
+         *         description: we have sent you a reset token
+         */
     .post(forgotPassword)
-module.exports.clientRoutes = routers;
+    routers.route('resetPassword/:resetToken')
+        /**
+         * @swagger
+         * /api/v1/client/resetPassword/{resetToken}:
+         *   put:
+         *     tags:
+         *       - Client
+         *     description: resetting password for client
+         *     parameters:
+         *       - name: resetToken
+         *         description: resetPasswordToken
+         *         in: path
+         *       - name: body
+         *         description: password fields
+         *         in: body
+         *         schema:
+         *           properties:
+         *             password:
+         *               type: string
+         *             confirmpassword:
+         *               type: string
+         *     responses:
+         *       200:
+         *         description: we have updated your password
+         */
+    .put(resetPasssword);
+    routers.route("/:id")
+        /**
+             * @swagger
+             * /api/v1/client/{id}:
+             *   put:
+             *     tags:
+             *       - Client
+             *     description: updating information of client
+             *     parameters:
+             *       - name: id
+             *         description: clientId
+             *         in: path
+             *       - name: body
+             *         description: password fields
+             *         in: body
+             *         schema:
+             *           properties:
+             *             Firstname:
+             *               type: string
+             *             Lastname:
+             *               type: string
+             *             Email_or_Telephone:
+             *               type: string
+             *             Gender:
+             *               type: string
+             *     responses:
+             *       200:
+             *         description: we have updated your info
+             */
+            .put(updateClient)
+/**
+* @swagger
+* /api/v1/client/{id}:
+*   delete:
+*     tags:
+*       - Client
+*     description: deleting client
+*     parameters:
+*       - name: id
+*         description: clientId
+*         in: path
+*     responses:
+*       200:
+*        description: client deleted
+*/
+.delete(deleteClient)
+module.exports.clientRoutes = routers
