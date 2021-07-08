@@ -4,15 +4,12 @@ const {
     postingClient,
     verifyClient,
     forgotPassword,
-<<<<<<< HEAD
     resetPasssword,
+    deleteClient,
     updateClient,
-    deleteClient
-=======
     loginClient,
     updatePassword,
     clientPhotoUpload
->>>>>>> 7383018edff0865c72d2e83ecb0842b9a04f43af
 } = require('../../controllers/clients/clients.controller.js');
 const {
     protect
