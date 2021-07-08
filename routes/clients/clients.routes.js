@@ -4,10 +4,13 @@ const {
     postingClient,
     verifyClient,
     forgotPassword,
-    resetPasssword,
-    updateClient,
-    deleteClient
+    loginClient,
+    updatePassword,
+    clientPhotoUpload
 } = require('../../controllers/clients/clients.controller.js');
+const {
+    protect
+} = require('../../middleware/auth.js');
 const routers = express.Router();
 routers.route("/")
     /**
@@ -69,6 +72,74 @@ routers.route('/verify/:verificationToken')
      *        description: Email verified
      */
     .get(verifyClient)
+routers.route('/login')
+    /**
+     * @swagger
+     * /api/v1/client/login:
+     *   post:
+     *     tags:
+     *       - Client
+     *     description: Login client
+     *     parameters:
+     *       - name: body
+     *         description: Credentials
+     *         in: body
+     *         schema:
+     *           properties:
+     *             Email_or_telephone:
+     *               type: string 
+     *             Password:
+     *               type: string
+     *     responses:
+     *       200:
+     *         description: Logged in successfully
+     */
+    .post(loginClient)
+routers.route('/updatePassword')
+    /**
+     * @swagger
+     * /api/v1/client/updatePassword:
+     *   put:
+     *     tags:
+     *       - Client
+     *     description: Change password
+     *     parameters:
+     *       - name: body
+     *         description: Body Field
+     *         in: body
+     *         schema:
+     *           properties:
+     *             currentPassword:
+     *               type: string 
+     *             newPassword:
+     *               type: string
+     *             confirmPassword:
+     *               type: string
+     *     responses:
+     *       200:
+     *         description: Password updated
+     */
+    .put(protect, updatePassword)
+routers.route('/photo')
+      /**
+       * @swagger
+       * /api/v1/client/photo:
+       *   put:
+       *     tags:
+       *       - Client
+       *     description: Upload profile picture
+       *     consumes:
+       *       - multipart/form-data
+       *     parameters:
+       *       - name: Photo
+       *         description: Upload a photo
+       *         in: formData
+       *         type: file
+       *     responses:
+       *       200:
+       *         description: Profile updated
+       */
+    .put(protect, clientPhotoUpload)
 routers.route("/forgotPassword")
     /**
          * @swagger

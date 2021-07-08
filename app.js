@@ -1,6 +1,8 @@
 const express = require('express');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require("swagger-ui-express");
+const path = require('path');
+const fileupload = require('express-fileupload');
 //routes
 const {
     clientRoutes
@@ -37,6 +39,8 @@ app.use(xss());
 //prevent http param pollution
 app.use(hpp());
 
+//image upload
+app.use(fileupload());
 //documentation
 const swaggerOptions = {
     swaggerDefinition: {
@@ -44,6 +48,7 @@ const swaggerOptions = {
             version: '1.0.0',
             title: 'Bus booking APIs',
             description: 'Documantaion of all bus booking APIs',
+            termsOfService: "http://swagger.io/terms/",
             contact: {
                 name: "Querty group",
                 email: "quertygroup0@gmail.com"
@@ -69,8 +74,11 @@ app.use('/documentation', swaggerUi.serve, swaggerUi.setup(swaggerDocs, false, {
 
 //routes
 app.use('/api/v1/client', clientRoutes);
-
+//defining public folder
+app.use(express.static(path.join(__dirname, 'public')))
+//creating server
 app.listen(port, () => {
     console.log(`App listening on port ${port}!`);
 });
+//including database
 require('./models/database');
