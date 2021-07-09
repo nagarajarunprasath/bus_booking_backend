@@ -7,7 +7,7 @@ const database = 'busbooking';
 const devConfig =new Client({
     host: 'localhost',
     database: `${database}`,
-    password: 'password@2001',
+    password: 'kayitare@123',
     user: 'postgres',
     port: 5432,
    dialectOptions: {
