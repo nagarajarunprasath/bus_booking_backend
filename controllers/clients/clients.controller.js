@@ -149,16 +149,25 @@ exports.forgotPassword=async(req,res,next)=>{
          }
 }
 exports.resetPasssword=async(req,res,next)=>{
-    const {password,comfirmpassword}=req.body;
+    const {password,confirmPassword}=req.body;
     try {
-        const resetPasswordToken=crypto.createHash("sha256").update(req.params.resetToken).digest("hex");
+        if (!password || !confirmPassword) return res.status(400).json({
+            message: "All fields are required"
+        })
+        if (password.length<6) return res.status(400).json({
+            message: "Password must be at least 6 characters long"
+        })
+        if (password !== confirmPassword) return res.status(400).json({ message: "password must match" })
+        const resetPasswordToken = crypto.createHash("sha256").update(req.params.resetToken).digest("hex");
+        const salt = 10;
+        const hash = await bcrypt.hash(password, salt)
         await client.query(`select * from booking.clients where resetpasswordtoken = '${resetPasswordToken}'`,(err,resp)=>{
             if(resp.rows.length<1){
              res.json({success:false,message:"invalid token"}).status(404);
             }
-            else{
-                client.query(`update booking.clients set password='${password}',resetpasswordtoken=${null},resetpasswordexpire=${null}`, (err, result) => {
-                    if (err) res.json({ success: false, message: err.message }).status(400)
+            else {
+                client.query(`update booking.clients set password='${hash}',resetpasswordtoken=${null},resetpasswordexpires=${null}`, (err, result) => {
+                    if (err) return res.json({ success: false, message: err.message }).status(400)
                     return res.json({ success: true, message: "password updated succesfully" }).status(201);
                 })
             }

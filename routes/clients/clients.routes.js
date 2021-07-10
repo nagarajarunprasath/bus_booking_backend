@@ -164,7 +164,7 @@ routers.route("/forgotPassword")
          *         description: we have sent you a reset token
          */
     .post(forgotPassword)
-    routers.route('resetPassword/:resetToken')
+    routers.route('/resetPassword/:resetToken')
         /**
          * @swagger
          * /api/v1/client/resetPassword/{resetToken}:
@@ -176,14 +176,14 @@ routers.route("/forgotPassword")
          *       - name: resetToken
          *         description: resetPasswordToken
          *         in: path
-         *       - name: body
+         *       - name: resetToken
          *         description: password fields
          *         in: body
          *         schema:
          *           properties:
          *             password:
          *               type: string
-         *             confirmpassword:
+         *             confirmPassword:
          *               type: string
          *     responses:
          *       200:
