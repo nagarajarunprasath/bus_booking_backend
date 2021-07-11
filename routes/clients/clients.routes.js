@@ -219,7 +219,7 @@ routers.route("/forgotPassword")
              *       200:
              *         description: we have updated your info
              */
-            .put(updateClient)
+            .put(protect,updateClient)
 /**
 * @swagger
 * /api/v1/client/{id}:
@@ -235,5 +235,5 @@ routers.route("/forgotPassword")
 *       200:
 *        description: client deleted
 */
-.delete(deleteClient)
+.delete(protect,deleteClient)
 module.exports.clientRoutes = routers
