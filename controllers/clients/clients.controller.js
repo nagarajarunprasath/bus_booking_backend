@@ -289,11 +289,7 @@ exports.loginClient = async (req, res, next) => {
                         expires: new Date(Date.now() + "12h"),
                         httpOnly: true,
                     };
-                    res.status(200).cookie('token', token, options).json({
-                        success: true,
-                        token: token,
-                        message: "logged in successfully"
-                    }).redirect('https://bookinga.netlify.app/')
+                    res.status(200).cookie('token', token, options).redirect('https://bookinga.netlify.app/dashboard')
                 }
             }
         })
