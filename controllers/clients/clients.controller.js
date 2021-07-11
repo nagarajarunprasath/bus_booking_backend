@@ -100,7 +100,7 @@ exports.verifyClient = async (req, res, next) => {
                     if (error) {
                         console.log(error);
                     }
-                 return res.status(200).json("being redirected to dashboard").redirect("https://bookinga.netlify.app/dashboard/bus");
+                 return res.status(200).redirect("https://bookinga.netlify.app/dashboard/bus");
                 });
             }
         })
