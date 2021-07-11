@@ -53,7 +53,7 @@ const swaggerOptions = {
                 name: "Querty group",
                 email: "quertygroup0@gmail.com"
             },
-            servers: ['http://localhost:2500']
+            servers: ['http://localhost:2500', 'https://bookinga.herokuapp.com/']
         },
         schemes: [process.env.NODE_ENV === "production" ? "https" : "http"],
         securityDefinitions: {
