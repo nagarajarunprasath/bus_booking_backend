@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const crypto=require("crypto");
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const {
     v4: uuidv4
@@ -33,7 +33,6 @@ exports.postingClient = async (req, res) => {
             expiresIn: process.env.ACCESS_TOKEN_LIFE
         })
         const confirmationCode = verificationToken;
-    
         //generating random id
         const id = uuidv4();
         const {
@@ -44,12 +43,11 @@ exports.postingClient = async (req, res) => {
             Gender,
             confirmPassword
         } = req.body
-        if (!Firstname || !Lastname || !Email_or_telephone || !Password || !confirmPassword || !Gender) {
-            return res.status(400).json("All fields are required");
-        }
-        if (Password !== confirmPassword) {
-            return res.status(400).json("Password must match");
-        }
+        if (!Firstname || !Lastname || !Email_or_telephone || !Password || !confirmPassword || !Gender) return res.status(400).json("All fields are required");
+        if (Firstname.length < 3 || Lastname.length <3) return res.status(400).json("Both Firstname and lastname must be at least 3 characters long");
+        if (Firstname.length>30 || Lastname.length>30) return res.status(400).json("Both Firstname and lastname must be less than 30 characters long");
+        if (Password !== confirmPassword) return res.status(400).json("Password must match");
+        if (Gender !== 'M' || Gender !== 'F') return res.status(400).json("Gender must be M or F");
         const salt = 10;
         const hashedPass = await bcrypt.hash(`${Password}`, salt);
         const query = `INSERT INTO clients(clientid,firstname,lastname,email_or_telephone,gender,password,confirmationCode) VALUES('${id}','${Firstname}','${Lastname}','${Email_or_telephone}','${Gender}','${hashedPass}','${confirmationCode}')`;
@@ -59,7 +57,7 @@ exports.postingClient = async (req, res) => {
             } else {
                 try {
                     // Step 3 - Email the user a unique verification link
-                    const url = `http://localhost:2500/api/v1/client/verify/${verificationToken}`
+                    const url = `https://bookinga.herokuapp.com/api/v1/client/verify/${verificationToken}`
                     const message = `
         <h1>Email verification</h1>
         <p> Thank you for joining.Please confirm your email by clicking on the following link </p>
@@ -111,18 +109,23 @@ exports.verifyClient = async (req, res, next) => {
     }
 
 }
-exports.forgotPassword=async(req,res,next)=>{
-    const {Email_or_telephone}=req.body;
+exports.forgotPassword = async (req, res, next) => {
+    const {
+        Email_or_telephone
+    } = req.body;
     try {
         const user = await client.query(`select * from clients where email_or_telephone='${Email_or_telephone}'`)
         if (user.rows.length < 1) {
-            return res.json({ success: false, message: "No user with such Email" }).status(404);
+            return res.json({
+                success: false,
+                message: "No user with such Email"
+            }).status(404);
         }
         let resetToken = crypto.randomBytes(20).toString("hex");
         let resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
         let resetPasswordExpire = Date.now() + 10 * (60 * 1000);
-        let update = client.query(`UPDATE clients set resetpasswordtoken='${resetPasswordToken}',resetpasswordexpires=TO_TIMESTAMP('${resetPasswordExpire}') where email_or_telephone='${Email_or_telephone}'`,(err,resp)=>{
-            if(err){
+        let update = client.query(`UPDATE clients set resetpasswordtoken='${resetPasswordToken}',resetpasswordexpires=TO_TIMESTAMP('${resetPasswordExpire}') where email_or_telephone='${Email_or_telephone}'`, (err, resp) => {
+            if (err) {
                 console.log(err.message);
             }
             const resetUrl = `https://bookinga.netlify.app/pwdreset/?txy=${resetToken}`
@@ -131,7 +134,10 @@ exports.forgotPassword=async(req,res,next)=>{
          <h5>follow this link to reset</h5>
          <a href=${resetUrl}>${resetUrl}</a>
          `
-            res.json({ success: true, message: "email sent" }).status(200);
+            res.json({
+                success: true,
+                message: "email sent"
+            }).status(200);
             try {
                 sendEmail({
                     to: Email_or_telephone,
@@ -141,34 +147,46 @@ exports.forgotPassword=async(req,res,next)=>{
             } catch (error) {
                 client.query("update clients set resetpasswordtoken='',resetpasswordexpires=''");
             }
-         });
-        
-        }
-         catch(error){
-             console.log(error);
-         }
+        });
+
+    } catch (error) {
+        console.log(error);
+    }
 }
-exports.resetPasssword=async(req,res,next)=>{
-    const {password,confirmPassword}=req.body;
+exports.resetPasssword = async (req, res, next) => {
+    const {
+        password,
+        confirmPassword
+    } = req.body;
     try {
         if (!password || !confirmPassword) return res.status(400).json({
             message: "All fields are required"
         })
-        if (password.length<6) return res.status(400).json({
+        if (password.length < 6) return res.status(400).json({
             message: "Password must be at least 6 characters long"
         })
-        if (password !== confirmPassword) return res.status(400).json({ message: "password must match" })
+        if (password !== confirmPassword) return res.status(400).json({
+            message: "password must match"
+        })
         const resetPasswordToken = crypto.createHash("sha256").update(req.params.resetToken).digest("hex");
         const salt = 10;
         const hash = await bcrypt.hash(password, salt)
-        await client.query(`select * from clients where resetpasswordtoken = '${resetPasswordToken}'`,(err,resp)=>{
-            if(resp.rows.length<1){
-             res.json({success:false,message:"invalid token"}).status(404);
-            }
-            else {
+        await client.query(`select * from clients where resetpasswordtoken = '${resetPasswordToken}'`, (err, resp) => {
+            if (resp.rows.length < 1) {
+                res.json({
+                    success: false,
+                    message: "invalid token"
+                }).status(404);
+            } else {
                 client.query(`update clients set password='${hash}',resetpasswordtoken=${null},resetpasswordexpires=${null}`, (err, result) => {
-                    if (err) return res.json({ success: false, message: err.message }).status(400)
-                    return res.json({ success: true, message: "password updated succesfully" }).status(201);
+                    if (err) return res.json({
+                        success: false,
+                        message: err.message
+                    }).status(400)
+                    return res.json({
+                        success: true,
+                        message: "password updated succesfully"
+                    }).status(201);
                 })
             }
         })
@@ -178,23 +196,32 @@ exports.resetPasssword=async(req,res,next)=>{
 }
 //@desc delete client
 //@routes get /api/v1/auth/client
-exports.deleteClient=async(req,res,next)=>{
+exports.deleteClient = async (req, res, next) => {
     try {
         await client.query(`Delete from clients where clientId='${req.params.id}'`, (err, resp) => {
             if (err) {
                 console.log(err);
-                return res.json({ success: false, message: "unable to delete" }).status(400);
+                return res.json({
+                    success: false,
+                    message: "unable to delete"
+                }).status(400);
             }
-            res.json({ success: true, message: "user deleted succesfully" }).status(200);
+            res.json({
+                success: true,
+                message: "user deleted succesfully"
+            }).status(200);
         })
     } catch (error) {
-        res.json({success:false,message:error.message}).status(400);
+        res.json({
+            success: false,
+            message: error.message
+        }).status(400);
     }
 }
 //@desc update your info
 //@routes get /api/v1/auth/client/
 //access private
-exports.updateClient=async(req,res,next)=>{
+exports.updateClient = async (req, res, next) => {
     const {
         Firstname,
         Lastname,
@@ -202,14 +229,23 @@ exports.updateClient=async(req,res,next)=>{
         Gender,
     } = req.body
     try {
-        await client.query(`UPDATE clients set firstname='${Firstname}',lastname='${Lastname}',email_or_telephone='${Email_or_telephone}',Gender='${Gender}' where clientId='${req.params.id}'`,(err,resp)=>{
-            if(err){
-                return res.json({success:false,message:"Unable to update user"}).status(400);
+        await client.query(`UPDATE clients set firstname='${Firstname}',lastname='${Lastname}',email_or_telephone='${Email_or_telephone}',Gender='${Gender}' where clientId='${req.params.id}'`, (err, resp) => {
+            if (err) {
+                return res.json({
+                    success: false,
+                    message: "Unable to update user"
+                }).status(400);
             }
-            res.json({success:true,message:"client updated succesfully!!!"}).status(201)
+            res.json({
+                success: true,
+                message: "client updated succesfully!!!"
+            }).status(201)
         })
     } catch (error) {
-        res.json({success:false,message:error.message});
+        res.json({
+            success: false,
+            message: error.message
+        });
     }
 }
 exports.loginClient = async (req, res, next) => {
