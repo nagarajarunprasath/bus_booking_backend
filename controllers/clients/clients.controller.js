@@ -45,9 +45,9 @@ exports.postingClient = async (req, res) => {
         } = req.body
         if (!Firstname || !Lastname || !Email_or_telephone || !Password || !confirmPassword || !Gender) return res.status(400).json("All fields are required");
         if (Firstname.length < 3 || Lastname.length <3) return res.status(400).json("Both Firstname and lastname must be at least 3 characters long");
-        if (Firstname.length>30 || Lastname.length>30) return res.status(400).json("Both Firstname and lastname must be less than 30 characters long");
+        if (Firstname.length > 30 || Lastname.length > 30) return res.status(400).json("Both Firstname and lastname must be less than 30 characters long");
         if (Password !== confirmPassword) return res.status(400).json("Password must match");
-        if (Gender !== 'M' || Gender !== 'F') return res.status(400).json("Gender must be M or F");
+        if (Gender !== 'M' && Gender !== 'F') return res.status(400).json("Gender must be M or F");
         const salt = 10;
         const hashedPass = await bcrypt.hash(`${Password}`, salt);
         const query = `INSERT INTO clients(clientid,firstname,lastname,email_or_telephone,gender,password,confirmationCode) VALUES('${id}','${Firstname}','${Lastname}','${Email_or_telephone}','${Gender}','${hashedPass}','${confirmationCode}')`;
@@ -88,18 +88,19 @@ exports.postingClient = async (req, res) => {
 exports.verifyClient = async (req, res, next) => {
     try {
         const confirmationCode = req.params.verificationToken
-        console.log(confirmationCode);
+        // console.log(confirmationCode);
         client.query(`SELECT * FROM clients WHERE confirmationcode='${confirmationCode}'`, (error, result) => {
             if (error) {
                 console.log(error);
             } else if (result.rows.length == 0) {
+                console.log(result.rows)
                 return res.status(400).json(`no account found with: ${confirmationCode}`);
             } else {
                 client.query(`UPDATE clients set verified=true,confirmationcode=null where confirmationcode='${confirmationCode}'`, (error, result) => {
                     if (error) {
                         console.log(error);
                     }
-                    return res.redirect("https://bookinga.netlify.app/dashboard/bus");
+                    return res.status(200).json("being redirected to dashboard").redirect("https://bookinga.netlify.app/dashboard/bus");
                 });
             }
         })
