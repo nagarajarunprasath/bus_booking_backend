@@ -95,13 +95,12 @@ exports.verifyClient = async (req, res, next) => {
             } else if (result.rows.length == 0) {
                 return res.status(400).json(`no account found with: ${confirmationCode}`);
             } else {
-                console.log(result.rows.length);
                 client.query(`UPDATE clients set verified=true,confirmationcode=null where confirmationcode='${confirmationCode}'`, (error, result) => {
                     if (error) {
                         console.log(error);
                     }
+                    return res.redirect("https://bookinga.netlify.app/dashboard/bus");
                 });
-                return res.json("You can now login");
             }
         })
     } catch (error) {
