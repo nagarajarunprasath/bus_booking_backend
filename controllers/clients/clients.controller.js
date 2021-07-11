@@ -10,7 +10,7 @@ const {
 } = require('../../models/database');
 exports.gettingClients = (req, res) => {
     try {
-        client.query('SELECT * FROM booking.clients', (err, result) => {
+        client.query('SELECT * FROM clients', (err, result) => {
             if (err) console.log(err.message);
             return res.json({
                 success: true,
@@ -52,7 +52,7 @@ exports.postingClient = async (req, res) => {
         }
         const salt = 10;
         const hashedPass = await bcrypt.hash(`${Password}`, salt);
-        const query = `INSERT INTO booking.clients(clientid,firstname,lastname,email_or_telephone,gender,password,confirmationCode) VALUES('${id}','${Firstname}','${Lastname}','${Email_or_telephone}','${Gender}','${hashedPass}','${confirmationCode}')`;
+        const query = `INSERT INTO clients(clientid,firstname,lastname,email_or_telephone,gender,password,confirmationCode) VALUES('${id}','${Firstname}','${Lastname}','${Email_or_telephone}','${Gender}','${hashedPass}','${confirmationCode}')`;
         client.query(`${query}`, (error, result) => {
             if (error) {
                 return res.json("email or telephone  is used");
@@ -91,14 +91,14 @@ exports.verifyClient = async (req, res, next) => {
     try {
         const confirmationCode = req.params.verificationToken
         console.log(confirmationCode);
-        client.query(`SELECT * FROM booking.clients WHERE confirmationcode='${confirmationCode}'`, (error, result) => {
+        client.query(`SELECT * FROM clients WHERE confirmationcode='${confirmationCode}'`, (error, result) => {
             if (error) {
                 console.log(error);
             } else if (result.rows.length == 0) {
                 return res.status(400).json(`no account found with: ${confirmationCode}`);
             } else {
                 console.log(result.rows.length);
-                client.query(`UPDATE booking.clients set verified=true,confirmationcode=null where confirmationcode='${confirmationCode}'`, (error, result) => {
+                client.query(`UPDATE clients set verified=true,confirmationcode=null where confirmationcode='${confirmationCode}'`, (error, result) => {
                     if (error) {
                         console.log(error);
                     }
@@ -114,14 +114,14 @@ exports.verifyClient = async (req, res, next) => {
 exports.forgotPassword=async(req,res,next)=>{
     const {Email_or_telephone}=req.body;
     try {
-        const user = await client.query(`select * from booking.clients where email_or_telephone='${Email_or_telephone}'`)
+        const user = await client.query(`select * from clients where email_or_telephone='${Email_or_telephone}'`)
         if (user.rows.length < 1) {
             return res.json({ success: false, message: "No user with such Email" }).status(404);
         }
         let resetToken = crypto.randomBytes(20).toString("hex");
         let resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
         let resetPasswordExpire = Date.now() + 10 * (60 * 1000);
-        let update = client.query(`UPDATE booking.clients set resetpasswordtoken='${resetPasswordToken}',resetpasswordexpires=TO_TIMESTAMP('${resetPasswordExpire}') where email_or_telephone='${Email_or_telephone}'`,(err,resp)=>{
+        let update = client.query(`UPDATE clients set resetpasswordtoken='${resetPasswordToken}',resetpasswordexpires=TO_TIMESTAMP('${resetPasswordExpire}') where email_or_telephone='${Email_or_telephone}'`,(err,resp)=>{
             if(err){
                 console.log(err.message);
             }
@@ -139,7 +139,7 @@ exports.forgotPassword=async(req,res,next)=>{
                     text: message
                 })
             } catch (error) {
-                client.query("update booking.clients set resetpasswordtoken='',resetpasswordexpires=''");
+                client.query("update clients set resetpasswordtoken='',resetpasswordexpires=''");
             }
          });
         
@@ -161,12 +161,12 @@ exports.resetPasssword=async(req,res,next)=>{
         const resetPasswordToken = crypto.createHash("sha256").update(req.params.resetToken).digest("hex");
         const salt = 10;
         const hash = await bcrypt.hash(password, salt)
-        await client.query(`select * from booking.clients where resetpasswordtoken = '${resetPasswordToken}'`,(err,resp)=>{
+        await client.query(`select * from clients where resetpasswordtoken = '${resetPasswordToken}'`,(err,resp)=>{
             if(resp.rows.length<1){
              res.json({success:false,message:"invalid token"}).status(404);
             }
             else {
-                client.query(`update booking.clients set password='${hash}',resetpasswordtoken=${null},resetpasswordexpires=${null}`, (err, result) => {
+                client.query(`update clients set password='${hash}',resetpasswordtoken=${null},resetpasswordexpires=${null}`, (err, result) => {
                     if (err) return res.json({ success: false, message: err.message }).status(400)
                     return res.json({ success: true, message: "password updated succesfully" }).status(201);
                 })
@@ -180,7 +180,7 @@ exports.resetPasssword=async(req,res,next)=>{
 //@routes get /api/v1/auth/client
 exports.deleteClient=async(req,res,next)=>{
     try {
-        await client.query(`Delete from booking.clients where clientId='${req.params.id}'`, (err, resp) => {
+        await client.query(`Delete from clients where clientId='${req.params.id}'`, (err, resp) => {
             if (err) {
                 console.log(err);
                 return res.json({ success: false, message: "unable to delete" }).status(400);
@@ -202,7 +202,7 @@ exports.updateClient=async(req,res,next)=>{
         Gender,
     } = req.body
     try {
-        await client.query(`UPDATE booking.clients set firstname='${Firstname}',lastname='${Lastname}',email_or_telephone='${Email_or_telephone}',Gender='${Gender}' where clientId='${req.params.id}'`,(err,resp)=>{
+        await client.query(`UPDATE clients set firstname='${Firstname}',lastname='${Lastname}',email_or_telephone='${Email_or_telephone}',Gender='${Gender}' where clientId='${req.params.id}'`,(err,resp)=>{
             if(err){
                 return res.json({success:false,message:"Unable to update user"}).status(400);
             }
@@ -223,7 +223,7 @@ exports.loginClient = async (req, res, next) => {
             message: "email or telephone and password are required"
         })
         //finding if user exists
-        client.query(`SELECT * FROM booking.clients where email_or_telephone='${Email_or_telephone}'`, async (error, result) => {
+        client.query(`SELECT * FROM clients where email_or_telephone='${Email_or_telephone}'`, async (error, result) => {
             if (error) console.log(error.message);
             else if (result.rows.length == 0) return res.status(400).json({
                 message: "invalid email/telephone or password"
@@ -272,7 +272,7 @@ exports.updatePassword = async (req, res) => {
             confirmPassword
         } = req.body
         //checking if user exists
-        client.query(`SELECT * FROM booking.clients where clientid='${req.user[0].clientid}'`, async (error, result) => {
+        client.query(`SELECT * FROM clients where clientid='${req.user[0].clientid}'`, async (error, result) => {
             if (error) console.log(error.message);
             else {
                 if (result.rows.length == 0) {
@@ -300,7 +300,7 @@ exports.updatePassword = async (req, res) => {
                         //hashing newPassword
                         const salt = 10;
                         const hash = await bcrypt.hash(newPassword, salt);
-                        client.query(`UPDATE booking.clients set password='${hash}' WHERE clientid='${req.user[0].clientid}'`, (error, result) => {
+                        client.query(`UPDATE clients set password='${hash}' WHERE clientid='${req.user[0].clientid}'`, (error, result) => {
                             if (error) console.log(error.message)
                             return res.status(200).json({
                                 message: "password updated"
@@ -320,7 +320,7 @@ exports.updatePassword = async (req, res) => {
 exports.clientPhotoUpload = async (req, res) => {
     try {
         //checking if user exists
-        client.query(`SELECT * FROM booking.clients where clientid='${req.user[0].clientid}'`, async (error, result) => {
+        client.query(`SELECT * FROM clients where clientid='${req.user[0].clientid}'`, async (error, result) => {
             if (error) console.log(error.message);
             else {
                 if (result.rows.length == 0) {
@@ -352,7 +352,7 @@ exports.clientPhotoUpload = async (req, res) => {
                                     message: "Problem with image upload"
                                 });
                             }
-                            client.query(`UPDATE booking.clients SET photo='${file.name}' WHERE clientid='${req.user[0].clientid}'`, (error, result) => {
+                            client.query(`UPDATE clients SET photo='${file.name}' WHERE clientid='${req.user[0].clientid}'`, (error, result) => {
                                 if (error) console.log(error.message)
                                 res.status(200).json({
                                     success: true,
