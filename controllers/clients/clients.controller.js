@@ -234,12 +234,6 @@ exports.deleteClient = async (req, res, next) => {
 //@routes get /api/v1/auth/client/
 //access private
 exports.updateClient = async (req, res, next) => {
-    const {
-        Firstname,
-        Lastname,
-        Email_or_telephone,
-        Gender,
-    } = req.body
     try {
         //check if client exist or not
         const query = `SELECT * FROM clients where clientid='${req.params.id}'`;
