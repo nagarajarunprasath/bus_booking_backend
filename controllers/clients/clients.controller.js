@@ -43,6 +43,9 @@ exports.postingClient = async (req, res) => {
             Gender,
             confirmPassword
         } = req.body
+        const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
+        const Emailpattern = /^([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)@([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)[\\.]([a-zA-Z]{2,9})$/
+        if(!Email_or_telephone.match(Emailpattern) && !Email_or_telephone.match(Phonepattern)) return res.json("invalid email address or telephone")
         if (!Firstname || !Lastname || !Email_or_telephone || !Password || !confirmPassword || !Gender) return res.status(400).json("All fields are required");
         if (Firstname.length < 3 || Lastname.length <3) return res.status(400).json("Both Firstname and lastname must be at least 3 characters long");
         if (Firstname.length > 30 || Lastname.length > 30) return res.status(400).json("Both Firstname and lastname must be less than 30 characters long");
@@ -286,11 +289,7 @@ exports.loginClient = async (req, res, next) => {
                         expires: new Date(Date.now() + "12h"),
                         httpOnly: true,
                     };
-                    res.status(200).cookie('token', token, options).json({
-                        success: true,
-                        token: token,
-                        message: "logged in successfully"
-                    }).redirect('https://bookinga.netlify.app/')
+                    res.status(200).cookie('token', token, options).redirect('https://bookinga.netlify.app/dashboard')
                 }
             }
         })
