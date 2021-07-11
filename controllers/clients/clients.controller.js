@@ -57,7 +57,7 @@ exports.postingClient = async (req, res) => {
             } else {
                 try {
                     // Step 3 - Email the user a unique verification link
-                    const url = `https://bookinga.herokuapp.com/api/v1/client/verify/${verificationToken}`
+                    const url = `https://bookinga.herokuapp.com/api/v1/client/verify/:${verificationToken}`
                     const message = `
         <h1>Email verification</h1>
         <p> Thank you for joining.Please confirm your email by clicking on the following link </p>
