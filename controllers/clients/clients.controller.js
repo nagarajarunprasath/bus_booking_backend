@@ -50,7 +50,7 @@ exports.postingClient = async (req, res) => {
         if (Gender !== 'M' && Gender !== 'F') return res.status(400).json("Gender must be M or F");
         const salt = 10;
         const hashedPass = await bcrypt.hash(`${Password}`, salt);
-        const query = `INSERT INTO clients(clientid,firstname,lastname,email_or_telephone,gender,password,confirmationCode) VALUES('${id}','${Firstname}','${Lastname}','${Email_or_telephone}','${Gender}','${hashedPass}','${confirmationCode}')`;
+        const query = `INSERT INTO clients(clientid,firstname,lastname,email_or_telephone,gender,password,confirmationcode) VALUES('${id}','${Firstname}','${Lastname}','${Email_or_telephone}','${Gender}','${hashedPass}','${confirmationCode}')`;
         client.query(`${query}`, (error, result) => {
             if (error) {
                 return res.json("email or telephone  is used");
@@ -100,7 +100,7 @@ exports.verifyClient = async (req, res, next) => {
                     if (error) {
                         console.log(error);
                     }
-                    return res.status(200).json("being redirected to dashboard").redirect("https://bookinga.netlify.app/dashboard/bus");
+                 return res.status(200).json("being redirected to dashboard").redirect("https://bookinga.netlify.app/dashboard/bus");
                 });
             }
         })
