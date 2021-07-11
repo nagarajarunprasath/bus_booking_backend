@@ -201,18 +201,27 @@ exports.resetPasssword = async (req, res, next) => {
 //@routes get /api/v1/auth/client
 exports.deleteClient = async (req, res, next) => {
     try {
-        await client.query(`Delete from clients where clientId='${req.params.id}'`, (err, resp) => {
-            if (err) {
-                console.log(err);
-                return res.json({
-                    success: false,
-                    message: "unable to delete"
-                }).status(400);
+        //checking if user with this id exist
+        const query = `SELECT * FROM clients where clientid='${req.params.id}'`;
+        client.query(`${query}`, async(err, result) => {
+            if (err) console.log(err);
+            else if (result.rows.length < 1) return res.status(404).json({ message: 'User not found' });
+            else {
+                
+                await client.query(`Delete from clients where clientId='${req.params.id}'`, (err, resp) => {
+                    if (err) {
+                        console.log(err);
+                        return res.json({
+                            success: false,
+                            message: "unable to delete"
+                        }).status(400);
+                    }
+                    res.json({
+                        success: true,
+                        message: "user deleted succesfully"
+                    }).status(200);
+                })
             }
-            res.json({
-                success: true,
-                message: "user deleted succesfully"
-            }).status(200);
         })
     } catch (error) {
         res.json({
@@ -225,24 +234,41 @@ exports.deleteClient = async (req, res, next) => {
 //@routes get /api/v1/auth/client/
 //access private
 exports.updateClient = async (req, res, next) => {
-    const {
-        Firstname,
-        Lastname,
-        Email_or_telephone,
-        Gender,
-    } = req.body
     try {
-        await client.query(`UPDATE clients set firstname='${Firstname}',lastname='${Lastname}',email_or_telephone='${Email_or_telephone}',Gender='${Gender}' where clientId='${req.params.id}'`, (err, resp) => {
-            if (err) {
-                return res.json({
-                    success: false,
-                    message: "Unable to update user"
-                }).status(400);
+        //check if client exist or not
+        const query = `SELECT * FROM clients where clientid='${req.params.id}'`;
+        client.query(`${query}`, async (err, result) => {
+            if (err) console.log(err);
+            else if (result.rows.length < 1) return res.status(404).json({
+                message: 'User not found'
+            });
+            else {
+                const {
+                    Firstname,
+                    Lastname,
+                    Email_or_telephone,
+                    Gender,
+                } = req.body
+                //validating before updating
+                 const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
+                 const Emailpattern = /^([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)@([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)[\\.]([a-zA-Z]{2,9})$/
+                 if (!Email_or_telephone.match(Emailpattern) && !Email_or_telephone.match(Phonepattern)) return res.json("invalid email address or telephone")
+                 if (Firstname.length < 3 || Lastname.length < 3) return res.status(400).json("Both Firstname and lastname must be at least 3 characters long");
+                 if (Firstname.length > 30 || Lastname.length > 30) return res.status(400).json("Both Firstname and lastname must be less than 30 characters long");
+                 if (Gender !== 'M' && Gender !== 'F') return res.status(400).json("Gender must be M or F");
+                await client.query(`UPDATE clients set firstname='${Firstname}',lastname='${Lastname}',email_or_telephone='${Email_or_telephone}',Gender='${Gender}' where clientId='${req.params.id}'`, (err, resp) => {
+                    if (err) {
+                        return res.json({
+                            success: false,
+                            message: "Unable to update user"
+                        }).status(400);
+                    }
+                    res.json({
+                        success: true,
+                        message: "client updated succesfully!"
+                    }).status(201)
+                })
             }
-            res.json({
-                success: true,
-                message: "client updated succesfully!!!"
-            }).status(201)
         })
     } catch (error) {
         res.json({
