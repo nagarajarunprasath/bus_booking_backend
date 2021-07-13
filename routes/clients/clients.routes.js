@@ -10,8 +10,7 @@ const {
     loginClient,
     updatePassword,
     clientPhotoUpload,
-    testing,
-    checking
+    checkingPhone
 } = require('../../controllers/clients/clients.controller.js');
 const {
     protect
@@ -238,8 +237,6 @@ routers.route("/forgotPassword")
 *        description: client deleted
 */
     .delete(protect, deleteClient)
-routers.route('/testing')
-    .get(testing)
-routers.route('/check')
-.get(checking)
+routers.route('/phoneVerification')
+.get(checkingPhone)
 module.exports.clientRoutes = routers
