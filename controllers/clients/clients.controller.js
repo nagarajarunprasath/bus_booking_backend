@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs');
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
+const config = require('../config')
+const twilio = require('twilio')(config.accountSID, config.authToken);
 const {
     v4: uuidv4
 } = require('uuid');
@@ -45,9 +47,9 @@ exports.postingClient = async (req, res) => {
         } = req.body
         const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
         const Emailpattern = /^([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)@([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)[\\.]([a-zA-Z]{2,9})$/
-        if(!Email_or_telephone.match(Emailpattern) && !Email_or_telephone.match(Phonepattern)) return res.json("invalid email address or telephone")
+        if (!Email_or_telephone.match(Emailpattern) && !Email_or_telephone.match(Phonepattern)) return res.json("invalid email address or telephone")
         if (!Firstname || !Lastname || !Email_or_telephone || !Password || !confirmPassword || !Gender) return res.status(400).json("All fields are required");
-        if (Firstname.length < 3 || Lastname.length <3) return res.status(400).json("Both Firstname and lastname must be at least 3 characters long");
+        if (Firstname.length < 3 || Lastname.length < 3) return res.status(400).json("Both Firstname and lastname must be at least 3 characters long");
         if (Firstname.length > 30 || Lastname.length > 30) return res.status(400).json("Both Firstname and lastname must be less than 30 characters long");
         if (Password !== confirmPassword) return res.status(400).json("Password must match");
         if (Gender !== 'M' && Gender !== 'F') return res.status(400).json("Gender must be M or F");
@@ -103,7 +105,7 @@ exports.verifyClient = async (req, res, next) => {
                     if (error) {
                         console.log(error);
                     }
-                 return res.status(200).redirect("https://bookinga.netlify.app/dashboard/bus");
+                    return res.status(200).redirect("https://bookinga.netlify.app/dashboard/bus");
                 });
             }
         })
@@ -203,11 +205,13 @@ exports.deleteClient = async (req, res, next) => {
     try {
         //checking if user with this id exist
         const query = `SELECT * FROM clients where clientid='${req.params.id}'`;
-        client.query(`${query}`, async(err, result) => {
+        client.query(`${query}`, async (err, result) => {
             if (err) console.log(err);
-            else if (result.rows.length < 1) return res.status(404).json({ message: 'User not found' });
+            else if (result.rows.length < 1) return res.status(404).json({
+                message: 'User not found'
+            });
             else {
-                
+
                 await client.query(`Delete from clients where clientId='${req.params.id}'`, (err, resp) => {
                     if (err) {
                         console.log(err);
@@ -250,12 +254,12 @@ exports.updateClient = async (req, res, next) => {
                     Gender,
                 } = req.body
                 //validating before updating
-                 const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
-                 const Emailpattern = /^([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)@([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)[\\.]([a-zA-Z]{2,9})$/
-                 if (!Email_or_telephone.match(Emailpattern) && !Email_or_telephone.match(Phonepattern)) return res.json("invalid email address or telephone")
-                 if (Firstname.length < 3 || Lastname.length < 3) return res.status(400).json("Both Firstname and lastname must be at least 3 characters long");
-                 if (Firstname.length > 30 || Lastname.length > 30) return res.status(400).json("Both Firstname and lastname must be less than 30 characters long");
-                 if (Gender !== 'M' && Gender !== 'F') return res.status(400).json("Gender must be M or F");
+                const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
+                const Emailpattern = /^([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)@([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)[\\.]([a-zA-Z]{2,9})$/
+                if (!Email_or_telephone.match(Emailpattern) && !Email_or_telephone.match(Phonepattern)) return res.json("invalid email address or telephone")
+                if (Firstname.length < 3 || Lastname.length < 3) return res.status(400).json("Both Firstname and lastname must be at least 3 characters long");
+                if (Firstname.length > 30 || Lastname.length > 30) return res.status(400).json("Both Firstname and lastname must be less than 30 characters long");
+                if (Gender !== 'M' && Gender !== 'F') return res.status(400).json("Gender must be M or F");
                 await client.query(`UPDATE clients set firstname='${Firstname}',lastname='${Lastname}',email_or_telephone='${Email_or_telephone}',Gender='${Gender}' where clientId='${req.params.id}'`, (err, resp) => {
                     if (err) {
                         return res.json({
@@ -315,7 +319,8 @@ exports.loginClient = async (req, res, next) => {
                         expires: new Date(Date.now() + "12h"),
                         httpOnly: true,
                     };
-                    res.status(200).cookie('token', token, options).redirect('https://bookinga.netlify.app/dashboard')
+                    // res.status(200).cookie('token', token, options).redirect('https://bookinga.netlify.app/dashboard')
+                    res.status(200).cookie('token', token, options).json({message:"logged in successfully"})
                 }
             }
         })
@@ -429,4 +434,39 @@ exports.clientPhotoUpload = async (req, res) => {
     } catch (error) {
         console.log(error);
     }
+}
+
+exports.testing = async (req, res) => {
+    twilio
+        .verify
+        .services(config.serviceID)
+        .verifications
+        .create({
+            to: `+${req.query.phonenumber}`,
+            channel:req.query.channel
+        })
+        .then(data => {
+        return res.status(200).json({data})
+        })
+        .catch(err => {
+            console.log(err);
+    })
+}
+exports.checking = async (req, res, next) => {
+     twilio
+         .verify
+         .services(config.serviceID)
+         .verificationChecks
+         .create({
+             to: `+${req.query.phonenumber}`,
+             code: req.query.code
+         })
+         .then(data => {
+             return res.status(200).json({
+                 data
+             })
+         })
+         .catch(err => {
+             console.log(err);
+         })
 }
