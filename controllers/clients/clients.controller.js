@@ -356,20 +356,21 @@ exports.updateClient = async (req, res, next) => {
 exports.loginClient = async (req, res, next) => {
     try {
         const {
-            phoneNumber,
-            Email,
+            Email_or_telephone,
             Password
         } = req.body
         //validating email
-        if (!Email && !phoneNumber) return res.status(401).json({
+        if (!Email_or_telephone && !phoneNumber) return res.status(401).json({
             message: "Email or telephone is required"
         })
-        //finding if user exists
-        if (Email) {
-            client.query(`SELECT * FROM clients where email='${Email}'`, async (error, result) => {
+          const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
+         const Emailpattern = /^([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)@([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)[\\.]([a-zA-Z]{2,9})$/
+         if (!Email_or_telephone.match(Emailpattern) && !Email_or_telephone.match(Phonepattern)) return res.status(400).json("invalid email/telephone")
+         //finding if user exists
+            client.query(`SELECT * FROM clients where email='${Email_or_telephone}' or telephone='${Email_or_telephone}'`, async (error, result) => {
                 if (error) console.log(error.message);
                 else if (result.rows.length == 0) return res.status(400).json({
-                    message: "invalid email or password"
+                    message: "invalid email/telephone or password"
                 });
                 //checking if client is verified
                 else if (result.rows[0].verified !== true) {
@@ -380,43 +381,7 @@ exports.loginClient = async (req, res, next) => {
                     //comparingPassword
                     const passMatch = await bcrypt.compare(Password, result.rows[0].password)
                     if (!passMatch) return res.status(401).json({
-                        message: "invalid email or password"
-                    });
-                    else {
-                        //generating token
-                        const token = jwt.sign({
-                            id: result.rows[0].clientid
-                        }, process.env.JWT_SECRET, {
-                            expiresIn: Date.now() + "12h"
-                        })
-                        const options = {
-                            expires: new Date(Date.now() + "12h"),
-                            httpOnly: true,
-                        };
-                        // res.status(200).cookie('token', token, options).redirect('https://bookinga.netlify.app/dashboard')
-                        res.status(200).cookie('token', token, options).json({
-                            message: "logged in successfully"
-                        })
-                    }
-                }
-            })
-        }
-        if (phoneNumber) {
-            client.query(`SELECT * FROM clients where telephone='${phoneNumber}'`, async (error, result) => {
-                if (error) console.log(error.message);
-                else if (result.rows.length == 0) return res.status(400).json({
-                    message: "invalid phone number or password"
-                });
-                //checking if client is verified
-                else if (result.rows[0].verified !== true) {
-                    return res.status(400).json({
-                        message: "Please verify your phone number first"
-                    })
-                } else {
-                    //comparingPassword
-                    const passMatch = await bcrypt.compare(Password, result.rows[0].password)
-                    if (!passMatch) return res.status(401).json({
-                        message: "invalid telephone or password"
+                        message: "invalid email/telephone or password"
                     });
                     else {
                         //generating token
@@ -437,7 +402,6 @@ exports.loginClient = async (req, res, next) => {
                     }
                 }
             })
-        }
     } catch (error) {
         console.log(error)
     }

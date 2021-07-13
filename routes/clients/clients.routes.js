@@ -92,10 +92,8 @@ routers.route('/login')
      *         in: body
      *         schema:
      *           properties:
-     *             Email:
+     *             Email_or_telephone:
      *               type: string 
-     *             phoneNumber:
-     *               type: string
      *             Password:
      *               type: string
      *     responses:
