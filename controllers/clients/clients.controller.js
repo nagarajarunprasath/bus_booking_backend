@@ -49,10 +49,10 @@ exports.postingClient = async (req, res) => {
         } = req.body
         const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
         const Emailpattern = /^([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)@([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)[\\.]([a-zA-Z]{2,9})$/
+        if (!Firstname || !Lastname || !Password || !confirmPassword || !Gender) return res.status(400).json("Firstname,Lastname,Password,Gender, Phone number or email or both are required");
         if (!Email && !phoneNumber) return res.status(400).json("Email or phone number must be provided");
         if (Email && !Email.match(Emailpattern)) return res.status(400).json("invalid email address")
         if (phoneNumber && !phoneNumber.match(Phonepattern)) return res.json("invalid telephone number")
-        if (!Firstname || !Lastname || !Password || !confirmPassword || !Gender) return res.status(400).json("All fields are required");
         if (Firstname.length < 3 || Lastname.length < 3) return res.status(400).json("Both Firstname and lastname must be at least 3 characters long");
         if (Firstname.length > 30 || Lastname.length > 30) return res.status(400).json("Both Firstname and lastname must be less than 30 characters long");
         if (Password !== confirmPassword) return res.status(400).json("Password must match");
@@ -152,7 +152,7 @@ exports.checkingPhone = async (req, res) => {
     const {
         phoneNumber,
         code
-    } = req.body;
+    } = req.query;
     const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
     if (!phoneNumber || !code) return res.status(400).json({
         message: "number and code are required"
@@ -167,11 +167,11 @@ exports.checkingPhone = async (req, res) => {
             .services(process.env.serviceId)
             .verificationChecks
             .create({
-                to: req.body.phoneNumber,
-                code: req.body.code
+                to: `+${phoneNumber}`,
+                code
             })
             .then(() => {
-                client.query(`UPDATE clients set verified=true where telephone='${phoneNumber}'`, (error, result) => {
+                client.query(`UPDATE clients set verified=true where telephone='+${phoneNumber}'`, (error, result) => {
                     if (error) console.log(error.message)
                 })
                 return res.status(200).json({

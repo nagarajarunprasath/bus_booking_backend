@@ -42,7 +42,9 @@ routers.route("/")
      *         in: body
      *         schema:
      *           properties:
-     *             Email_or_telephone:
+     *             Email:
+     *               type: string 
+     *             phoneNumber:
      *               type: string 
      *             Firstname:
      *               type: string
@@ -238,5 +240,24 @@ routers.route("/forgotPassword")
 */
     .delete(protect, deleteClient)
 routers.route('/phoneVerification')
+     /**
+      * @swagger
+      * /api/v1/client/phoneVerification:
+      *   get:
+      *     tags:
+      *       - Client
+      *     description: Verify phone phoneNumber
+      *     parameters:
+      *       - name: phoneNumber
+      *         type: string
+      *         in: query
+      *       - name: code
+      *         type: number
+      *         in: query
+      *         description: Code
+      *     responses:
+      *       200:
+      *        description: phone verified
+      */
 .get(checkingPhone)
 module.exports.clientRoutes = routers
