@@ -29,10 +29,11 @@
     "hpp": "^0.2.3",
     "jsonwebtoken": "^8.5.1",
     "nodemailer": "^6.6.2",
-    "nodemon": "^2.0.9",
+    "nodemon": "^2.0.12",
     "pg": "^8.6.0",
     "swagger-jsdoc": "^6.1.0",
     "swagger-ui-express": "^4.1.6",
+    "twilio": "^3.65.0",
     "uuid": "^8.3.2",
     "xss-clean": "^0.1.1"
   }
