@@ -4,13 +4,15 @@ const {
     postingClient,
     verifyClient,
     forgotPassword,
-    resetPasssword,
+   resetPassswordIfEmailUsed,
     deleteClient,
     updateClient,
     loginClient,
     updatePassword,
     clientPhotoUpload,
-    checkingPhone
+    checkingPhone,
+    verifyResetPassCode,
+    resetPassswordIfPhoneUsed
 } = require('../../controllers/clients/clients.controller.js');
 const {
     protect
@@ -146,53 +148,6 @@ routers.route('/photo')
        *         description: Profile updated
        */
     .put(protect, clientPhotoUpload)
-routers.route("/forgotPassword")
-    /**
-         * @swagger
-         * /api/v1/client/forgotpassword:
-         *   post:
-         *     tags:
-         *       - Client
-         *     description: getting password resetToken
-         *     parameters:
-         *       - name: body
-         *         description: Client fields
-         *         in: body
-         *         schema:
-         *           properties:
-         *             Email_or_telephone:
-         *               type: string
-         *     responses:
-         *       200:
-         *         description: we have sent you a reset token
-         */
-    .post(forgotPassword)
-    routers.route('/resetPassword/:resetToken')
-        /**
-         * @swagger
-         * /api/v1/client/resetPassword/{resetToken}:
-         *   put:
-         *     tags:
-         *       - Client
-         *     description: resetting password for client
-         *     parameters:
-         *       - name: resetToken
-         *         description: resetPasswordToken
-         *         in: path
-         *       - name: resetToken
-         *         description: password fields
-         *         in: body
-         *         schema:
-         *           properties:
-         *             password:
-         *               type: string
-         *             confirmPassword:
-         *               type: string
-         *     responses:
-         *       200:
-         *         description: we have updated your password
-         */
-    .put(resetPasssword);
     routers.route("/:id")
         /**
              * @swagger
@@ -259,5 +214,93 @@ routers.route('/phoneVerification')
       *       200:
       *        description: phone verified
       */
-.get(checkingPhone)
+    .get(checkingPhone)
+routers.route("/forgotPassword")
+    /**
+     * @swagger
+     * /api/v1/client/forgotpassword:
+     *   post:
+     *     tags:
+     *       - Client
+     *     description: getting password resetToken
+     *     parameters:
+     *       - name: body
+     *         description: Client fields
+     *         in: body
+     *         schema:
+     *           properties:
+     *             Email_or_telephone:
+     *               type: string
+     *     responses:
+     *       200:
+     *         description: we have sent you a reset code
+     */
+    .post(forgotPassword)
+routers.route('/resetPassword/:resetToken')
+    /**
+     * @swagger
+     * /api/v1/client/resetPassword/{resetToken}:
+     *   put:
+     *     tags:
+     *       - Client
+     *     description: resetting password for client
+     *     parameters:
+     *       - name: resetToken
+     *         description: resetPasswordToken
+     *         in: path
+     *       - name: resetToken
+     *         description: password fields
+     *         in: body
+     *         schema:
+     *           properties:
+     *             password:
+     *               type: string
+     *             confirmPassword:
+     *               type: string
+     *     responses:
+     *       200:
+     *         description: we have updated your password
+     */
+    .put(resetPassswordIfEmailUsed);
+routers.route('/verifyResetPassCode')
+       /**
+        * @swagger
+        * /api/v1/client/verifyResetPassCode:
+        *   get:
+        *     tags:
+        *       - Client
+        *     description: Verify reset password code
+        *     parameters:
+        *       - name: Telephone
+        *         type: string
+        *         in: query
+        *       - name: code
+        *         type: number
+        *         in: query
+        *         description: Code
+        *     responses:
+        *       200:
+        *        description: You can now reset password
+        */
+    .get(verifyResetPassCode)
+routers.route("/resetPasssword/phone")
+    /**
+     * @swagger
+     * /api/v1/client/resetPassword/phone:
+     *   put:
+     *     tags:
+     *       - Client
+     *     description: resetting password for client
+     *     parameters:
+     *         schema:
+     *           properties:
+     *             password:
+     *               type: string
+     *             confirmPassword:
+     *               type: string
+     *     responses:
+     *       200:
+     *         description: we have updated your password
+     */
+    .put(resetPassswordIfPhoneUsed)
 module.exports.clientRoutes = routers
