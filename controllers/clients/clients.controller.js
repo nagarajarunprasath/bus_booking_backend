@@ -80,59 +80,64 @@ exports.postingClient = async (req, res) => {
 }
 //verify phone number after sign up
 exports.checkingPhone = async (req, res) => {
-    const {
-        phoneNumber,
-        code
-    } = req.body;
-    const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
-    if (!phoneNumber || !code) return res.status(400).json({
-        message: "Phone number and code are required"
-    });
-    if (!phoneNumber.match(Phonepattern)) return res.json("invalid telephone number")
-    if (code.length !== 6) return res.status(400).json({
-        message: "Code must be 6 characters long"
-    });
-    else {
-        twilio
-            .verify
-            .services(process.env.serviceId)
-            .verificationChecks
-            .create({
-                to: phoneNumber,
-                code
-            })
-            .then((data) => {
-                if (data.status == "approved") {
-                    client.query(`UPDATE clients set verified=true where telephone='${phoneNumber}'`, (error, result) => {
-                        if (error) console.log(error.message)
-                    })
-                    client.query(`SELECT * FROM clients where telephone='${phoneNumber}'`, async (error, result) => {
-                        if (error) console.log(error)
-                        else {
-                            //generating token
-                            const token = jwt.sign({
-                                id: result.rows[0].clientid
-                            }, process.env.JWT_SECRET, {
-                                expiresIn: Date.now() + "12h"
-                            })
-                            const options = {
-                                expires: new Date(Date.now() + "12h"),
-                                httpOnly: true,
-                            };
-                            res.status(200).cookie('token', token, options).json({
-                                message: "Registered successfully",
-                                token
-                            })
-                        }
-                    })
-                }
-            })
-            .catch(err => {
-                console.log(err.message);
-                 return res.status(400).json({
-                    message:"incorect code"
-                 });
-            })
+    try {
+        const {
+            phoneNumber,
+            code
+        } = req.body;
+        const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
+        if (!phoneNumber || !code) return res.status(400).json({
+            message: "Phone number and code are required"
+        });
+        if (!phoneNumber.match(Phonepattern)) return res.json("invalid telephone number")
+        if (code.length !== 6) return res.status(400).json({
+            message: "Code must be 6 characters long"
+        });
+        else {
+            twilio
+                .verify
+                .services(process.env.serviceId)
+                .verificationChecks
+                .create({
+                    to: phoneNumber,
+                    code
+                })
+                .then((data) => {
+                    if (data.status == "approved") {
+                        client.query(`UPDATE clients set verified=true where telephone='${phoneNumber}'`, (error, result) => {
+                            if (error) console.log(error.message)
+                        })
+                        client.query(`SELECT * FROM clients where telephone='${phoneNumber}'`, async (error, result) => {
+                            if (error) console.log(error)
+                            else {
+                                //generating token
+                                const token = jwt.sign({
+                                    id: result.rows[0].clientid
+                                }, process.env.JWT_SECRET, {
+                                    expiresIn: Date.now() + "12h"
+                                })
+                                const options = {
+                                    expires: new Date(Date.now() + "12h"),
+                                    httpOnly: true,
+                                };
+                                res.status(200).cookie('token', token, options).json({
+                                    message: "Registered successfully",
+                                    token
+                                })
+                            }
+                        })
+                    }
+                })
+                .catch(err => {
+                    console.log(err.message);
+                    return res.status(400).json({
+                        message: "incorect code"
+                    });
+                })
+        }
+    }
+    catch (error) {
+        console.log(error)
     }
 }
 
