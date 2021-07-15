@@ -106,7 +106,7 @@ exports.checkingPhone = async (req, res) => {
                     client.query(`UPDATE clients set verified=true where telephone='${phoneNumber}'`, (error, result) => {
                         if (error) console.log(error.message)
                     })
-                    client.query(`SELECT * FROM clients where telephone='${Telephone}'`, async (error, result) => {
+                    client.query(`SELECT * FROM clients where telephone='${phoneNumber}'`, async (error, result) => {
                         if (error) console.log(error)
                         else {
                             //generating token
@@ -119,7 +119,6 @@ exports.checkingPhone = async (req, res) => {
                                 expires: new Date(Date.now() + "12h"),
                                 httpOnly: true,
                             };
-                            // res.status(200).cookie('token', token, options).redirect('https://bookinga.netlify.app/dashboard')
                             res.status(200).cookie('token', token, options).json({
                                 message: "Registered successfully",
                                 token
@@ -127,16 +126,11 @@ exports.checkingPhone = async (req, res) => {
                         }
                     })
                 }
-                else {
-                     return res.status(400).json({
-                         message: "Incorect code"
-                     });
-                }
             })
             .catch(err => {
                 console.log(err.message);
                  return res.status(400).json({
-                     message: "Incorect code"
+                    message:"incorect code"
                  });
             })
     }
