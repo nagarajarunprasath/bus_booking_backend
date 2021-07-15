@@ -121,6 +121,7 @@ exports.checkingPhone = async (req, res) => {
                                     httpOnly: true,
                                 };
                                 res.status(200).cookie('token', token, options).json({
+                                    success:true,
                                     message: "Registered successfully",
                                     token
                                 })
