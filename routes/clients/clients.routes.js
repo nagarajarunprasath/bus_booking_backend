@@ -138,7 +138,7 @@ routers.route('/phoneVerification')
      *         in: body
      *         schema:
      *           properties:
-     *             Telephone:
+     *             phoneNumber:
      *               type: string 
      *             code:
      *               type: string
