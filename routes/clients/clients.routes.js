@@ -16,7 +16,7 @@ const {
     protect
 } = require('../../middleware/auth.js');
 const routers = express.Router();
-routers.route("/resetPasssword")
+routers.route("/resetPassword")
     /**
      * @swagger
      * /api/v1/client/resetPassword:

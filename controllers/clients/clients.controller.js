@@ -52,7 +52,6 @@ exports.postingClient = async (req, res) => {
             if (error) {
                 return res.status(400).json('Telephone alread exist');
             } else {
-                console.log(process.env.serviceId);
                 twilio
                     .verify
                     .services(process.env.serviceId)
