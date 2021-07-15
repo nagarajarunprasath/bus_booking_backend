@@ -27,7 +27,7 @@ exports.protect = async (req, res, next) => {
                     message: err.message
                 });
             } else {
-                client.query(`select clientid,firstname,lastname,gender,email_or_telephone from clients where clientid='${decoded.id}'`, (error, result) => {
+                client.query(`select clientid,firstname,lastname,gender,email,telephone from clients where clientid='${decoded.id}'`, (error, result) => {
                     if (error) console.log(error);
                     req.user = result.rows;
                     next();

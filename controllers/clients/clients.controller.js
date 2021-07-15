@@ -95,24 +95,24 @@ exports.postingClient = async (req, res) => {
                 if (error) {
                     return res.status(400).json('Telephone is used');
                 } else {
-                        twilio
-                            .verify
-                            .services(process.env.serviceID)
-                            .verifications
-                            .create({
-                                to: phoneNumber,
-                                channel: 'sms'
+                    twilio
+                        .verify
+                        .services(process.env.serviceID)
+                        .verifications
+                        .create({
+                            to: phoneNumber,
+                            channel: 'sms'
+                        })
+                        .then(() => {
+                            return res.status(201).json({
+                                success: true,
+                                message: `Verification code is sent to ${phoneNumber}`
                             })
-                            .then(() => {
-                                return res.status(201).json({
-                                    success: true,
-                                    message: `Verification code is sent to ${phoneNumber}`
-                                })
-                            })
-                            .catch(err => {
-                                console.log(err.message);
-                            })
-                    }
+                        })
+                        .catch(err => {
+                            console.log(err.message);
+                        })
+                }
             })
         }
     } catch (error) {
@@ -191,46 +191,69 @@ exports.forgotPassword = async (req, res, next) => {
         Email_or_telephone
     } = req.body;
     try {
-        const user = await client.query(`select * from clients where email_or_telephone='${Email_or_telephone}'`)
+        const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
+        const Emailpattern = /^([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)@([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)[\\.]([a-zA-Z]{2,9})$/
+        if (!Email_or_telephone) return res.status(400).json("Email or phone number must be provided");
+        if (!Email_or_telephone.match(Emailpattern) && !Email_or_telephone.match(Phonepattern)) return res.status(400).json("Invalid email/phone number")
+        const user = await client.query(`select * from clients where email='${Email_or_telephone}' or telephone='${Email_or_telephone}'`)
         if (user.rows.length < 1) {
             return res.json({
                 success: false,
-                message: "No user with such Email"
+                message: "No user with such Email or telephone"
             }).status(404);
         }
-        let resetToken = crypto.randomBytes(20).toString("hex");
-        let resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
-        let resetPasswordExpire = Date.now() + 10 * (60 * 1000);
-        let update = client.query(`UPDATE clients set resetpasswordtoken='${resetPasswordToken}',resetpasswordexpires=TO_TIMESTAMP('${resetPasswordExpire}') where email_or_telephone='${Email_or_telephone}'`, (err, resp) => {
-            if (err) {
-                console.log(err.message);
-            }
-            const resetUrl = `https://bookinga.netlify.app/pwdreset/?txy=${resetToken}`
-            const message = `
+        if (Email_or_telephone.match(Emailpattern)) {
+            let resetToken = crypto.randomBytes(20).toString("hex");
+            let resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+            let resetPasswordExpire = Date.now() + 10 * (60 * 1000);
+            let update = client.query(`UPDATE clients set resetpasswordtoken='${resetPasswordToken}',resetpasswordexpires=TO_TIMESTAMP('${resetPasswordExpire}') where email='${Email_or_telephone}' or telephone='${Email_or_telephone}'`, (err, resp) => {
+                if (err) {
+                    console.log(err.message);
+                }
+                const resetUrl = `https://bookinga.netlify.app/pwdreset/?txy=${resetToken}`
+                const message = `
          <h2>you have requested a password request</h2>
          <h5>follow this link to reset</h5>
          <a href=${resetUrl}>${resetUrl}</a>
          `
-            res.json({
-                success: true,
-                message: "email sent"
-            }).status(200);
-            try {
-                sendEmail({
-                    to: Email_or_telephone,
-                    subject: 'reset password Request',
-                    text: message
+                try {
+                    sendEmail({
+                        to: Email_or_telephone,
+                        subject: 'reset password Request',
+                        text: message
+                    })
+                    res.json({
+                        success: true,
+                        message: "email sent"
+                    }).status(200);
+                } catch (error) {
+                    client.query("update clients set resetpasswordtoken='',resetpasswordexpires=''");
+                }
+            });
+        } else {
+            twilio
+                .verify
+                .services(process.env.serviceID)
+                .verifications
+                .create({
+                    to: req.body.Email_or_telephone,
+                    channel: 'sms'
                 })
-            } catch (error) {
-                client.query("update clients set resetpasswordtoken='',resetpasswordexpires=''");
-            }
-        });
-
+                .then(() => {
+                    return res.status(201).json({
+                        success: true,
+                        message: `Reset password code is sent to ${req.body.Email_or_telephone}`
+                    }).redirect("https://bookinga.netlify.app");
+                })
+                .catch(err => {
+                    console.log(err.message);
+                })
+        }
     } catch (error) {
         console.log(error);
     }
 }
-exports.resetPasssword = async (req, res, next) => {
+exports.resetPassswordIfEmailUsed = async (req, res, next) => {
     const {
         password,
         confirmPassword
@@ -269,6 +292,62 @@ exports.resetPasssword = async (req, res, next) => {
         })
     } catch (error) {
         console.log(error);
+    }
+}
+//checking if code provided is valid before pass reset
+exports.verifyResetPassCode = (req, res) => {
+    twilio
+        .verify
+        .services(process.env.serviceId)
+        .verificationChecks
+        .create({
+            to: req.body.Telephone,
+            code: req.body.code
+        })
+        .then((data) => {
+            return res.status(200).json({
+                data
+            })
+            //redirecting to https://bookinga.netlify.app/pwdreset
+        })
+        .catch(err => {
+            console.log(err.message);
+            return res.status(400).json({
+                message: "Invalid code"
+            });
+        })
+}
+//resetting password after verifying code
+exports.resetPassswordIfPhoneUsed = async (req, res, next) => {
+    const {
+        password,
+        confirmPassword
+    } = req.body;
+    try {
+        if (!password || !confirmPassword) return res.status(400).json({
+            message: "All fields are required"
+        })
+        if (password.length < 6) return res.status(400).json({
+            message: "Password must be at least 6 characters long"
+        })
+        if (password !== confirmPassword) return res.status(400).json({
+            message: "password must match"
+        })
+        const salt = 10;
+        const hash = await bcrypt.hash(password, salt)
+        client.query(`update clients set password='${hash}' where telephone='${req.body.Telephone}'`, (err, result) => {
+            if (err) return res.json({
+                success: false,
+                message: err.message
+            }).status(400)
+            return res.json({
+                success: true,
+                message: "password updated succesfully"
+            }).status(201);
+        })
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json("Server error")
     }
 }
 //@desc delete client
@@ -363,45 +442,45 @@ exports.loginClient = async (req, res, next) => {
         if (!Email_or_telephone && !phoneNumber) return res.status(401).json({
             message: "Email or telephone is required"
         })
-          const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
-         const Emailpattern = /^([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)@([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)[\\.]([a-zA-Z]{2,9})$/
-         if (!Email_or_telephone.match(Emailpattern) && !Email_or_telephone.match(Phonepattern)) return res.status(400).json("invalid email/telephone")
-         //finding if user exists
-            client.query(`SELECT * FROM clients where email='${Email_or_telephone}' or telephone='${Email_or_telephone}'`, async (error, result) => {
-                if (error) console.log(error.message);
-                else if (result.rows.length == 0) return res.status(400).json({
+        const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
+        const Emailpattern = /^([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)@([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)[\\.]([a-zA-Z]{2,9})$/
+        if (!Email_or_telephone.match(Emailpattern) && !Email_or_telephone.match(Phonepattern)) return res.status(400).json("invalid email/telephone")
+        //finding if user exists
+        client.query(`SELECT * FROM clients where email='${Email_or_telephone}' or telephone='${Email_or_telephone}'`, async (error, result) => {
+            if (error) console.log(error.message);
+            else if (result.rows.length == 0) return res.status(400).json({
+                message: "invalid email/telephone or password"
+            });
+            //checking if client is verified
+            else if (result.rows[0].verified !== true) {
+                return res.status(400).json({
+                    message: "Please verify your email first"
+                })
+            } else {
+                //comparingPassword
+                const passMatch = await bcrypt.compare(Password, result.rows[0].password)
+                if (!passMatch) return res.status(401).json({
                     message: "invalid email/telephone or password"
                 });
-                //checking if client is verified
-                else if (result.rows[0].verified !== true) {
-                    return res.status(400).json({
-                        message: "Please verify your email first"
+                else {
+                    //generating token
+                    const token = jwt.sign({
+                        id: result.rows[0].clientid
+                    }, process.env.JWT_SECRET, {
+                        expiresIn: Date.now() + "12h"
                     })
-                } else {
-                    //comparingPassword
-                    const passMatch = await bcrypt.compare(Password, result.rows[0].password)
-                    if (!passMatch) return res.status(401).json({
-                        message: "invalid email/telephone or password"
-                    });
-                    else {
-                        //generating token
-                        const token = jwt.sign({
-                            id: result.rows[0].clientid
-                        }, process.env.JWT_SECRET, {
-                            expiresIn: Date.now() + "12h"
-                        })
-                        const options = {
-                            expires: new Date(Date.now() + "12h"),
-                            httpOnly: true,
-                        };
-                        // res.status(200).cookie('token', token, options).redirect('https://bookinga.netlify.app/dashboard')
-                        res.status(200).cookie('token', token, options).json({
-                            message: "logged in successfully",
-                            token
-                        })
-                    }
+                    const options = {
+                        expires: new Date(Date.now() + "12h"),
+                        httpOnly: true,
+                    };
+                    // res.status(200).cookie('token', token, options).redirect('https://bookinga.netlify.app/dashboard')
+                    res.status(200).cookie('token', token, options).json({
+                        message: "logged in successfully",
+                        token
+                    })
                 }
-            })
+            }
+        })
     } catch (error) {
         console.log(error)
     }
