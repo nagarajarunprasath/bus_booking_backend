@@ -259,5 +259,4 @@ routers.route("/forgotPassword")
          *         description: Profile updated
          */
     .put(protect, clientPhotoUpload)
-        
 module.exports.clientRoutes = routers
