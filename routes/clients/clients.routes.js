@@ -81,7 +81,7 @@ routers.route("/")
      *               type: string
      *     responses:
      *       200:
-     *         description: We have send email verification code to your email
+     *         description: We have send cphone verification code to your number
      */
     .post(postingClient)
       /**
