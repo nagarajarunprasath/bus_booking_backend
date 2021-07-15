@@ -3,7 +3,9 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 dotenv.config();
-const twilio = require('twilio')(process.env.accountSid, process.env.authToken);
+const twilio = require('twilio')(process.env.accountSid, process.env.authToken, {
+    lazyLoading:true
+});
 const {
     v4: uuidv4
 } = require('uuid');
@@ -104,8 +106,25 @@ exports.checkingPhone = async (req, res) => {
                     client.query(`UPDATE clients set verified=true where telephone='${phoneNumber}'`, (error, result) => {
                         if (error) console.log(error.message)
                     })
-                    return res.status(200).json({
-                        message: "You can now login"
+                    client.query(`SELECT * FROM clients where telephone='${Telephone}'`, async (error, result) => {
+                        if (error) console.log(error)
+                        else {
+                            //generating token
+                            const token = jwt.sign({
+                                id: result.rows[0].clientid
+                            }, process.env.JWT_SECRET, {
+                                expiresIn: Date.now() + "12h"
+                            })
+                            const options = {
+                                expires: new Date(Date.now() + "12h"),
+                                httpOnly: true,
+                            };
+                            // res.status(200).cookie('token', token, options).redirect('https://bookinga.netlify.app/dashboard')
+                            res.status(200).cookie('token', token, options).json({
+                                message: "Registered successfully",
+                                token
+                            })
+                        }
                     })
                 }
                 else {
@@ -228,7 +247,7 @@ exports.updateClient = async (req, res, next) => {
         client.query(`${query}`, async (err, result) => {
             if (err) console.log(err);
             else if (result.rows.length < 1) return res.status(404).json({
-                message: 'User not founddddd'
+                message: 'User not found'
             });
             else {
                 const {
