@@ -6,13 +6,14 @@ exports.protect = async (req, res, next) => {
     let token;
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1];
-    } else if (req.cookies.token) {
+    }
+    else if (req.cookies.token) {
         token = req.cookies.token
     }
     //verify if token is there
     if (!token) {
         return res.status(400).json({
-            message: 'not authorized to access route'
+            message: 'not authorized to access this route'
         })
     }
     try {
@@ -27,7 +28,7 @@ exports.protect = async (req, res, next) => {
                     message: err.message
                 });
             } else {
-                client.query(`select clientid,firstname,lastname,gender,email,telephone from clients where clientid='${decoded.id}'`, (error, result) => {
+                client.query(`select clientid,firstname,lastname,gender,telephone from clients where clientid='${decoded.id}'`, (error, result) => {
                     if (error) console.log(error);
                     req.user = result.rows;
                     next();
