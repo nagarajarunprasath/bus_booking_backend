@@ -7,7 +7,6 @@ const twilio = require('twilio')(process.env.accountSid, process.env.authToken);
 const {
     v4: uuidv4
 } = require('uuid');
-const sendEmail = require("../sendEmail")
 const {
     client
 } = require('../../models/database');
