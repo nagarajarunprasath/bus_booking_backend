@@ -3,6 +3,7 @@ const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require("swagger-ui-express");
 const path = require('path');
 const fileupload = require('express-fileupload');
+const morgan = require('morgan');
 //routes
 const {
     clientRoutes
@@ -79,6 +80,7 @@ app.get('/', (req, res) => {
         message: 'Welcome to Bookinga'
     })
 })
+if (process.env.NODE_ENV !== "production") app.use(morgan('dev'));
 //defining public folder
 app.use(express.static(path.join(__dirname, 'public')))
 //creating server

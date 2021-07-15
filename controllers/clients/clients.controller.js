@@ -29,135 +29,64 @@ exports.gettingClients = (req, res) => {
 //registering clients
 exports.postingClient = async (req, res) => {
     try {
-        //gereting token
-        const verificationToken = await jwt.sign({
-            email: req.body.Email_or_telephone
-        }, process.env.EMAIL_VERIFICATION_SECRET, {
-            expiresIn: process.env.ACCESS_TOKEN_LIFE
-        })
-        const confirmationCode = verificationToken;
         //generating random id
         const id = uuidv4();
         const {
             Firstname,
             Lastname,
-            Email,
-            phoneNumber,
+            Telephone,
             Password,
             Gender,
             confirmPassword
         } = req.body
         const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
-        const Emailpattern = /^([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)@([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)[\\.]([a-zA-Z]{2,9})$/
-        if (!Firstname || !Lastname || !Password || !confirmPassword || !Gender) return res.status(400).json("Firstname,Lastname,Password,Gender, Phone number or email or both are required");
-        if (!Email && !phoneNumber) return res.status(400).json("Email or phone number must be provided");
-        if (Email && !Email.match(Emailpattern)) return res.status(400).json("invalid email address")
-        if (phoneNumber && !phoneNumber.match(Phonepattern)) return res.json("invalid telephone number")
+        if (!Firstname || !Lastname || !Password || !confirmPassword || !Gender || !Telephone) return res.status(400).json("All fieds must be filled");
+        if (!Telephone.match(Phonepattern)) return res.json("Invalid telephone number")
         if (Firstname.length < 3 || Lastname.length < 3) return res.status(400).json("Both Firstname and lastname must be at least 3 characters long");
         if (Firstname.length > 30 || Lastname.length > 30) return res.status(400).json("Both Firstname and lastname must be less than 30 characters long");
         if (Password !== confirmPassword) return res.status(400).json("Password must match");
         if (Gender !== 'M' && Gender !== 'F') return res.status(400).json("Gender must be M or F");
         const salt = 10;
         const hashedPass = await bcrypt.hash(`${Password}`, salt);
-        if ((Email && !phoneNumber) || (Email && phoneNumber)) {
-            const query = `INSERT INTO clients(clientid,firstname,lastname,email,telephone,gender,password,confirmationcode) VALUES('${id}','${Firstname}','${Lastname}','${Email}','${phoneNumber}','${Gender}','${hashedPass}','${confirmationCode}')`;
-            client.query(`${query}`, (error, result) => {
-                if (error) {
-                    return res.json("Email or telephone  is used");
-                } else {
-                    //
-                    try {
-                        // Step 3 - Email the user a unique verification link
-                        const url = `https://bookinga.herokuapp.com/api/v1/client/verify/${verificationToken}`
-                        const message = `
-        <h1>Email verification</h1>
-        <p> Thank you for joining.Please confirm your email by clicking on the following link </p>
-        <a href=${url} clicktracking=off>Click here</a>
-        `
-                        sendEmail({
-                            to: Email,
-                            subject: "Verify account",
-                            text: message
-                        })
+        const query = `INSERT INTO clients(clientid,firstname,lastname,telephone,gender,password) VALUES('${id}','${Firstname}','${Lastname}','${Telephone}','${Gender}','${hashedPass}')`
+        client.query(`${query}`, (error, result) => {
+            if (error) {
+                return res.status(400).json('Telephone alread exist');
+            } else {
+                twilio
+                    .verify
+                    .services(process.env.serviceID)
+                    .verifications
+                    .create({
+                        to: Telephone,
+                        channel: 'sms'
+                    })
+                    .then(() => {
                         return res.status(201).json({
                             success: true,
-                            message: `Verification link is sent to ${Email}`
+                            message: `Please help us to know that the phone number provided belongs to you by entering code sent to: ${Telephone}`
                         })
-                    } catch (error) {
-                        console.log(error)
-                    }
-                    //
-                }
-            })
-        } else {
-            const query = `INSERT INTO clients(clientid,firstname,lastname,telephone,gender,password) VALUES('${id}','${Firstname}','${Lastname}','${phoneNumber}','${Gender}','${hashedPass}')`
-            client.query(`${query}`, (error, result) => {
-                if (error) {
-                    return res.status(400).json('Telephone is used');
-                } else {
-                    twilio
-                        .verify
-                        .services(process.env.serviceID)
-                        .verifications
-                        .create({
-                            to: phoneNumber,
-                            channel: 'sms'
-                        })
-                        .then(() => {
-                            return res.status(201).json({
-                                success: true,
-                                message: `Verification code is sent to ${phoneNumber}`
-                            })
-                        })
-                        .catch(err => {
-                            console.log(err.message);
-                        })
-                }
-            })
-        }
+                    })
+                    .catch(err => {
+                        console.log(err.message);
+                    })
+            }
+        })
     } catch (error) {
         console.log(error)
     }
 }
-//@desc verify client
-//@routes get /api/v1/auth/client/verify/:confirmationCode
-//access public
-
-exports.verifyClient = async (req, res, next) => {
-    try {
-        const confirmationCode = req.params.verificationToken
-        // console.log(confirmationCode);
-        client.query(`SELECT * FROM clients WHERE confirmationcode='${confirmationCode}'`, (error, result) => {
-            if (error) {
-                console.log(error);
-            } else if (result.rows.length == 0) {
-                console.log(result.rows.length)
-                return res.status(400).json(`no account found with: ${confirmationCode}`);
-            } else {
-                client.query(`UPDATE clients set verified=true,confirmationcode=null where confirmationcode='${confirmationCode}'`, (error, result) => {
-                    if (error) {
-                        console.log(error);
-                    }
-                    return res.status(200).redirect("https://bookinga.netlify.app/dashboard/bus");
-                });
-            }
-        })
-    } catch (error) {
-        console.log(error);
-    }
-
-}
-//verify phone if is used
+//verify phone number after sign up
 exports.checkingPhone = async (req, res) => {
     const {
         phoneNumber,
         code
-    } = req.query;
+    } = req.body;
     const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
     if (!phoneNumber || !code) return res.status(400).json({
-        message: "number and code are required"
+        message: "Phone number and code are required"
     });
-    if (!phoneNumber.match(Phonepattern)) return res.json("invalid email address or telephone")
+    if (!phoneNumber.match(Phonepattern)) return res.json("invalid telephone number")
     if (code.length !== 6) return res.status(400).json({
         message: "Code must be 6 characters long"
     });
@@ -167,129 +96,67 @@ exports.checkingPhone = async (req, res) => {
             .services(process.env.serviceId)
             .verificationChecks
             .create({
-                to: `+${phoneNumber}`,
+                to: phoneNumber,
                 code
             })
-            .then(() => {
-                client.query(`UPDATE clients set verified=true where telephone='+${phoneNumber}'`, (error, result) => {
-                    if (error) console.log(error.message)
-                })
-                return res.status(200).json({
-                    message: "You can now login"
-                })
+            .then((data) => {
+                if (data.status == "approved") {
+                    client.query(`UPDATE clients set verified=true where telephone='${phoneNumber}'`, (error, result) => {
+                        if (error) console.log(error.message)
+                    })
+                    return res.status(200).json({
+                        message: "You can now login"
+                    })
+                }
+                else {
+                     return res.status(400).json({
+                         message: "Incorect code"
+                     });
+                }
             })
             .catch(err => {
                 console.log(err.message);
-                return res.status(400).json({
-                    message: "Invalid code"
-                });
+                 return res.status(400).json({
+                     message: "Incorect code"
+                 });
             })
     }
 }
+
 exports.forgotPassword = async (req, res, next) => {
     const {
-        Email_or_telephone
+        Telephone
     } = req.body;
     try {
         const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
-        const Emailpattern = /^([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)@([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)[\\.]([a-zA-Z]{2,9})$/
-        if (!Email_or_telephone) return res.status(400).json("Email or phone number must be provided");
-        if (!Email_or_telephone.match(Emailpattern) && !Email_or_telephone.match(Phonepattern)) return res.status(400).json("Invalid email/phone number")
-        const user = await client.query(`select * from clients where email='${Email_or_telephone}' or telephone='${Email_or_telephone}'`)
+        if (!Telephone) return res.status(400).json("Phone number must be provided");
+        if (!Telephone.match(Phonepattern)) return res.status(400).json("Invalid phone number")
+        const user = await client.query(`select * from clients where telephone='${Telephone}'`)
         if (user.rows.length < 1) {
             return res.json({
                 success: false,
-                message: "No user with such Email or telephone"
+                message: "No user with such  telephone number"
             }).status(404);
         }
-        if (Email_or_telephone.match(Emailpattern)) {
-            let resetToken = crypto.randomBytes(20).toString("hex");
-            let resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
-            let resetPasswordExpire = Date.now() + 10 * (60 * 1000);
-            let update = client.query(`UPDATE clients set resetpasswordtoken='${resetPasswordToken}',resetpasswordexpires=TO_TIMESTAMP('${resetPasswordExpire}') where email='${Email_or_telephone}' or telephone='${Email_or_telephone}'`, (err, resp) => {
-                if (err) {
-                    console.log(err.message);
-                }
-                const resetUrl = `https://bookinga.netlify.app/pwdreset/?txy=${resetToken}`
-                const message = `
-         <h2>you have requested a password request</h2>
-         <h5>follow this link to reset</h5>
-         <a href=${resetUrl}>${resetUrl}</a>
-         `
-                try {
-                    sendEmail({
-                        to: Email_or_telephone,
-                        subject: 'reset password Request',
-                        text: message
-                    })
-                    res.json({
-                        success: true,
-                        message: "email sent"
-                    }).status(200);
-                } catch (error) {
-                    client.query("update clients set resetpasswordtoken='',resetpasswordexpires=''");
-                }
-            });
-        } else {
+    else {
             twilio
                 .verify
                 .services(process.env.serviceID)
                 .verifications
                 .create({
-                    to: req.body.Email_or_telephone,
+                    to: Telephone,
                     channel: 'sms'
                 })
                 .then(() => {
                     return res.status(201).json({
                         success: true,
-                        message: `Reset password code is sent to ${req.body.Email_or_telephone}`
-                    }).redirect("https://bookinga.netlify.app");
+                        message: `Reset password code is sent to ${Telephone}`
+                    })
                 })
                 .catch(err => {
                     console.log(err.message);
                 })
         }
-    } catch (error) {
-        console.log(error);
-    }
-}
-exports.resetPassswordIfEmailUsed = async (req, res, next) => {
-    const {
-        password,
-        confirmPassword
-    } = req.body;
-    try {
-        if (!password || !confirmPassword) return res.status(400).json({
-            message: "All fields are required"
-        })
-        if (password.length < 6) return res.status(400).json({
-            message: "Password must be at least 6 characters long"
-        })
-        if (password !== confirmPassword) return res.status(400).json({
-            message: "password must match"
-        })
-        const resetPasswordToken = crypto.createHash("sha256").update(req.params.resetToken).digest("hex");
-        const salt = 10;
-        const hash = await bcrypt.hash(password, salt)
-        await client.query(`select * from clients where resetpasswordtoken = '${resetPasswordToken}'`, (err, resp) => {
-            if (resp.rows.length < 1) {
-                res.json({
-                    success: false,
-                    message: "invalid token"
-                }).status(404);
-            } else {
-                client.query(`update clients set password='${hash}',resetpasswordtoken=${null},resetpasswordexpires=${null}`, (err, result) => {
-                    if (err) return res.json({
-                        success: false,
-                        message: err.message
-                    }).status(400)
-                    return res.json({
-                        success: true,
-                        message: "password updated succesfully"
-                    }).status(201);
-                })
-            }
-        })
     } catch (error) {
         console.log(error);
     }
@@ -305,20 +172,21 @@ exports.verifyResetPassCode = (req, res) => {
             code: req.body.code
         })
         .then((data) => {
-            return res.status(200).json({
-                data
+            if(data.status === "pending")  return res.status(401).json({
+                message:"Incorect code"
             })
-            //redirecting to https://bookinga.netlify.app/pwdreset
+            else {
+                return res.status(200).json({message: "You are free to reset your password"})
+            }
         })
         .catch(err => {
             console.log(err.message);
-            return res.status(400).json({
-                message: "Invalid code"
-            });
+            console.log(req.body.Telephone)
+            return res.status(401).json({ message: 'Invalid code' })
         })
 }
 //resetting password after verifying code
-exports.resetPassswordIfPhoneUsed = async (req, res, next) => {
+exports.resetPasssword = async (req, res, next) => {
     const {
         password,
         confirmPassword
@@ -350,69 +218,32 @@ exports.resetPassswordIfPhoneUsed = async (req, res, next) => {
         return res.status(500).json("Server error")
     }
 }
-//@desc delete client
-//@routes get /api/v1/auth/client
-exports.deleteClient = async (req, res, next) => {
-    try {
-        //checking if user with this id exist
-        const query = `SELECT * FROM clients where clientid='${req.params.id}'`;
-        client.query(`${query}`, async (err, result) => {
-            if (err) console.log(err);
-            else if (result.rows.length < 1) return res.status(404).json({
-                message: 'User not found'
-            });
-            else {
-
-                await client.query(`Delete from clients where clientId='${req.params.id}'`, (err, resp) => {
-                    if (err) {
-                        console.log(err);
-                        return res.json({
-                            success: false,
-                            message: "unable to delete"
-                        }).status(400);
-                    }
-                    res.json({
-                        success: true,
-                        message: "user deleted succesfully"
-                    }).status(200);
-                })
-            }
-        })
-    } catch (error) {
-        res.json({
-            success: false,
-            message: error.message
-        }).status(400);
-    }
-}
 //@desc update your info
-//@routes get /api/v1/auth/client/
+//@routes get /api/v1//client/
 //access private
 exports.updateClient = async (req, res, next) => {
     try {
         //check if client exist or not
-        const query = `SELECT * FROM clients where clientid='${req.params.id}'`;
+        const query = `SELECT * FROM clients where clientid='${req.user[0].clientid}'`;
         client.query(`${query}`, async (err, result) => {
             if (err) console.log(err);
             else if (result.rows.length < 1) return res.status(404).json({
-                message: 'User not found'
+                message: 'User not founddddd'
             });
             else {
                 const {
                     Firstname,
                     Lastname,
-                    Email_or_telephone,
-                    Gender,
+                    Telephone
                 } = req.body
                 //validating before updating
                 const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
-                const Emailpattern = /^([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)@([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)[\\.]([a-zA-Z]{2,9})$/
-                if (!Email_or_telephone.match(Emailpattern) && !Email_or_telephone.match(Phonepattern)) return res.json("invalid email address or telephone")
+                if (!Telephone.match(Phonepattern)) return res.json("Invalid telephone number")
                 if (Firstname.length < 3 || Lastname.length < 3) return res.status(400).json("Both Firstname and lastname must be at least 3 characters long");
-                if (Firstname.length > 30 || Lastname.length > 30) return res.status(400).json("Both Firstname and lastname must be less than 30 characters long");
-                if (Gender !== 'M' && Gender !== 'F') return res.status(400).json("Gender must be M or F");
-                await client.query(`UPDATE clients set firstname='${Firstname}',lastname='${Lastname}',email_or_telephone='${Email_or_telephone}',Gender='${Gender}' where clientId='${req.params.id}'`, (err, resp) => {
+                if (Firstname.length > 30 || Lastname.length > 30) return res.status(400).json("Both Firstname and lastname must be less than 30 characters long")
+                await client.query(`UPDATE clients set firstname='${Firstname}',lastname='${Lastname}',telephone='${Telephone}' where clientId='${req.user[0].clientid}'`, (err, resp) => {
                     if (err) {
+                        console.log(err)
                         return res.json({
                             success: false,
                             message: "Unable to update user"
@@ -435,32 +266,31 @@ exports.updateClient = async (req, res, next) => {
 exports.loginClient = async (req, res, next) => {
     try {
         const {
-            Email_or_telephone,
+            Telephone,
             Password
         } = req.body
         //validating email
-        if (!Email_or_telephone && !phoneNumber) return res.status(401).json({
-            message: "Email or telephone is required"
+        if (!Telephone || !Password) return res.status(401).json({
+            message: "Telephone and password are required"
         })
         const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
-        const Emailpattern = /^([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)@([0-9a-zA-Z]([-_\\.]*[0-9a-zA-Z]+)*)[\\.]([a-zA-Z]{2,9})$/
-        if (!Email_or_telephone.match(Emailpattern) && !Email_or_telephone.match(Phonepattern)) return res.status(400).json("invalid email/telephone")
+        if (!Telephone.match(Phonepattern)) return res.status(400).json("invalid telephone number")
         //finding if user exists
-        client.query(`SELECT * FROM clients where email='${Email_or_telephone}' or telephone='${Email_or_telephone}'`, async (error, result) => {
+        client.query(`SELECT * FROM clients where telephone='${Telephone}'`, async (error, result) => {
             if (error) console.log(error.message);
             else if (result.rows.length == 0) return res.status(400).json({
-                message: "invalid email/telephone or password"
+                message: "Incorect phone number"
             });
             //checking if client is verified
             else if (result.rows[0].verified !== true) {
                 return res.status(400).json({
-                    message: "Please verify your email first"
+                    message: "Please verify your phone number first"
                 })
             } else {
                 //comparingPassword
                 const passMatch = await bcrypt.compare(Password, result.rows[0].password)
                 if (!passMatch) return res.status(401).json({
-                    message: "invalid email/telephone or password"
+                    message: "Incorrect password"
                 });
                 else {
                     //generating token
@@ -485,7 +315,40 @@ exports.loginClient = async (req, res, next) => {
         console.log(error)
     }
 }
-
+//@desc delete client
+//@routes get /api/v1/auth/client
+exports.deleteClient = async (req, res, next) => {
+    try {
+        //checking if user with this id exist
+        const query = `SELECT * FROM clients where clientid='${req.user[0].clientid}'`;
+        client.query(`${query}`, async (err, result) => {
+            if (err) console.log(err);
+            else if (result.rows.length < 1) return res.status(404).json({
+                message: 'User not found'
+            });
+            else {
+                await client.query(`Delete from clients where clientId='${req.user[0].clientid}'`, (err, resp) => {
+                    if (err) {
+                        console.log(err);
+                        return res.json({
+                            success: false,
+                            message: "unable to delete"
+                        }).status(400);
+                    }
+                    res.json({
+                        success: true,
+                        message: "user deleted succesfully"
+                    }).status(200);
+                })
+            }
+        })
+    } catch (error) {
+        res.json({
+            success: false,
+            message: error.message
+        }).status(400);
+    }
+}
 exports.updatePassword = async (req, res) => {
     // console.log(req.user);
     try {

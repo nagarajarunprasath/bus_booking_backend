@@ -2,22 +2,45 @@ const express = require('express');
 const {
     gettingClients,
     postingClient,
-    verifyClient,
+    checkingPhone,
+    loginClient,
     forgotPassword,
-   resetPassswordIfEmailUsed,
+    verifyResetPassCode,
+    resetPasssword,
     deleteClient,
     updateClient,
-    loginClient,
     updatePassword,
     clientPhotoUpload,
-    checkingPhone,
-    verifyResetPassCode,
-    resetPassswordIfPhoneUsed
 } = require('../../controllers/clients/clients.controller.js');
 const {
     protect
 } = require('../../middleware/auth.js');
 const routers = express.Router();
+routers.route("/resetPasssword")
+    /**
+     * @swagger
+     * /api/v1/client/resetPassword:
+     *   put:
+     *     tags:
+     *       - Client
+     *     description: Resetting password
+     *     parameters:
+     *       - name: body
+     *         description: required fields
+     *         in: body
+     *         schema:
+     *           properties:
+     *             password:
+     *               type: string
+     *             confirmPassword:
+     *               type: string
+     *             Telephone:
+     *               type: string
+     *     responses:
+     *       200:
+     *         description: We have updated your password
+     */
+    .put(protect,resetPasssword)
 routers.route("/")
     /**
      * @swagger
@@ -44,9 +67,7 @@ routers.route("/")
      *         in: body
      *         schema:
      *           properties:
-     *             Email:
-     *               type: string 
-     *             phoneNumber:
+     *             Telephone:
      *               type: string 
      *             Firstname:
      *               type: string
@@ -63,23 +84,69 @@ routers.route("/")
      *         description: We have send email verification code to your email
      */
     .post(postingClient)
-routers.route('/verify/:verificationToken')
+      /**
+       * @swagger
+       * /api/v1/client:
+       *   put:
+       *     tags:
+       *       - Client
+       *     description: updating information of client
+       *     parameters:
+       *       - name: body
+       *         description: password fields
+       *         in: body
+       *         schema:
+       *           properties:
+       *             Firstname:
+       *               type: string
+       *             Lastname:
+       *               type: string
+       *             Telephone:
+       *               type: string
+       *     responses:
+       *       200:
+       *         description: we have updated your info
+       */
+    .put(protect, updateClient)
+        /**
+         * @swagger
+         * /api/v1/client:
+         *   delete:
+         *     tags:
+         *       - Client
+         *     description: deleting client
+         *     parameters:
+         *       - name: id
+         *         description: clientId
+         *         in: path
+         *     responses:
+         *       200:
+         *        description: client deleted
+         */
+        .delete(protect, deleteClient)
+routers.route('/phoneVerification')
     /**
      * @swagger
-     * /api/v1/client/verify/{verificationToken}:
-     *   get:
+     * /api/v1/client/phoneVerification:
+     *   post:
      *     tags:
      *       - Client
-     *     description: Verify email
+     *     description: Registering client
      *     parameters:
-     *       - name: verificationToken
-     *         description: Email verification
-     *         in: path
+     *       - name: body
+     *         description: Client fields
+     *         in: body
+     *         schema:
+     *           properties:
+     *             Telephone:
+     *               type: string 
+     *             code:
+     *               type: string
      *     responses:
      *       200:
-     *        description: Email verified
+     *         description: You can now login
      */
-    .get(verifyClient)
+    .post(checkingPhone)
 routers.route('/login')
     /**
      * @swagger
@@ -94,7 +161,7 @@ routers.route('/login')
      *         in: body
      *         schema:
      *           properties:
-     *             Email_or_telephone:
+     *             Telephone:
      *               type: string 
      *             Password:
      *               type: string
@@ -103,118 +170,6 @@ routers.route('/login')
      *         description: Logged in successfully
      */
     .post(loginClient)
-routers.route('/updatePassword')
-    /**
-     * @swagger
-     * /api/v1/client/updatePassword:
-     *   put:
-     *     tags:
-     *       - Client
-     *     description: Change password
-     *     parameters:
-     *       - name: body
-     *         description: Body Field
-     *         in: body
-     *         schema:
-     *           properties:
-     *             currentPassword:
-     *               type: string 
-     *             newPassword:
-     *               type: string
-     *             confirmPassword:
-     *               type: string
-     *     responses:
-     *       200:
-     *         description: Password updated
-     */
-    .put(protect, updatePassword)
-routers.route('/photo')
-      /**
-       * @swagger
-       * /api/v1/client/photo:
-       *   put:
-       *     tags:
-       *       - Client
-       *     description: Upload profile picture
-       *     consumes:
-       *       - multipart/form-data
-       *     parameters:
-       *       - name: Photo
-       *         description: Upload a photo
-       *         in: formData
-       *         type: file
-       *     responses:
-       *       200:
-       *         description: Profile updated
-       */
-    .put(protect, clientPhotoUpload)
-    routers.route("/:id")
-        /**
-             * @swagger
-             * /api/v1/client/{id}:
-             *   put:
-             *     tags:
-             *       - Client
-             *     description: updating information of client
-             *     parameters:
-             *       - name: id
-             *         description: clientId
-             *         in: path
-             *       - name: body
-             *         description: password fields
-             *         in: body
-             *         schema:
-             *           properties:
-             *             Firstname:
-             *               type: string
-             *             Lastname:
-             *               type: string
-             *             Email_or_Telephone:
-             *               type: string
-             *             Gender:
-             *               type: string
-             *     responses:
-             *       200:
-             *         description: we have updated your info
-             */
-            .put(protect,updateClient)
-/**
-* @swagger
-* /api/v1/client/{id}:
-*   delete:
-*     tags:
-*       - Client
-*     description: deleting client
-*     parameters:
-*       - name: id
-*         description: clientId
-*         in: path
-*     responses:
-*       200:
-*        description: client deleted
-*/
-    .delete(protect, deleteClient)
-routers.route('/phoneVerification')
-     /**
-      * @swagger
-      * /api/v1/client/phoneVerification:
-      *   get:
-      *     tags:
-      *       - Client
-      *     description: Verify phone phoneNumber
-      *     parameters:
-      *       - name: phoneNumber
-      *         type: string
-      *         in: query
-      *       - name: code
-      *         type: number
-      *         in: query
-      *         description: Code
-      *     responses:
-      *       200:
-      *        description: phone verified
-      */
-    .get(checkingPhone)
 routers.route("/forgotPassword")
     /**
      * @swagger
@@ -229,78 +184,79 @@ routers.route("/forgotPassword")
      *         in: body
      *         schema:
      *           properties:
-     *             Email_or_telephone:
+     *             Telephone:
      *               type: string
      *     responses:
      *       200:
      *         description: we have sent you a reset code
      */
     .post(forgotPassword)
-routers.route('/resetPassword/:resetToken')
-    /**
-     * @swagger
-     * /api/v1/client/resetPassword/{resetToken}:
-     *   put:
-     *     tags:
-     *       - Client
-     *     description: resetting password for client
-     *     parameters:
-     *       - name: resetToken
-     *         description: resetPasswordToken
-     *         in: path
-     *       - name: resetToken
-     *         description: password fields
-     *         in: body
-     *         schema:
-     *           properties:
-     *             password:
-     *               type: string
-     *             confirmPassword:
-     *               type: string
-     *     responses:
-     *       200:
-     *         description: we have updated your password
-     */
-    .put(resetPassswordIfEmailUsed);
-routers.route('/verifyResetPassCode')
-       /**
-        * @swagger
-        * /api/v1/client/verifyResetPassCode:
-        *   get:
-        *     tags:
-        *       - Client
-        *     description: Verify reset password code
-        *     parameters:
-        *       - name: Telephone
-        *         type: string
-        *         in: query
-        *       - name: code
-        *         type: number
-        *         in: query
-        *         description: Code
-        *     responses:
-        *       200:
-        *        description: You can now reset password
-        */
-    .get(verifyResetPassCode)
-routers.route("/resetPasssword/phone")
-    /**
-     * @swagger
-     * /api/v1/client/resetPassword/phone:
-     *   put:
-     *     tags:
-     *       - Client
-     *     description: resetting password for client
-     *     parameters:
-     *         schema:
-     *           properties:
-     *             password:
-     *               type: string
-     *             confirmPassword:
-     *               type: string
-     *     responses:
-     *       200:
-     *         description: we have updated your password
-     */
-    .put(resetPassswordIfPhoneUsed)
+     routers.route('/verifyResetPassCode')
+        /**
+         * @swagger
+         * /api/v1/client/verifyResetPassCode:
+         *   post:
+         *     tags:
+         *       - Client
+         *     description: Registering client
+         *     parameters:
+         *       - name: body
+         *         description: Client fields
+         *         in: body
+         *         schema:
+         *           properties:
+         *             Telephone:
+         *               type: string 
+         *             code:
+         *               type: string
+         *     responses:
+         *       200:
+         *         description: You can now proceed and reset your password
+         */
+         .post(verifyResetPassCode)
+    routers.route('/updatePassword')
+        /**
+         * @swagger
+         * /api/v1/client/updatePassword:
+         *   put:
+         *     tags:
+         *       - Client
+         *     description: Change password
+         *     parameters:
+         *       - name: body
+         *         description: Body Field
+         *         in: body
+         *         schema:
+         *           properties:
+         *             currentPassword:
+         *               type: string 
+         *             newPassword:
+         *               type: string
+         *             confirmPassword:
+         *               type: string
+         *     responses:
+         *       200:
+         *         description: Password updated
+         */
+        .put(protect, updatePassword)
+    routers.route('/photo')
+        /**
+         * @swagger
+         * /api/v1/client/photo:
+         *   put:
+         *     tags:
+         *       - Client
+         *     description: Upload profile picture
+         *     consumes:
+         *       - multipart/form-data
+         *     parameters:
+         *       - name: Photo
+         *         description: Upload a photo
+         *         in: formData
+         *         type: file
+         *     responses:
+         *       200:
+         *         description: Profile updated
+         */
+    .put(protect, clientPhotoUpload)
 module.exports.clientRoutes = routers
