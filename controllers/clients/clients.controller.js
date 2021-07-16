@@ -132,6 +132,7 @@ exports.checkingPhone = async (req, res) => {
                 .catch(err => {
                     console.log(err.message);
                     return res.status(400).json({
+                        success:false,
                         message: "incorect code"
                     });
                 })
@@ -195,13 +196,18 @@ exports.verifyResetPassCode = (req, res) => {
                 message:"Incorect code"
             })
             else {
-                return res.status(200).json({message: "You are free to reset your password"})
+                return res.status(200).json({
+                    success:true,
+                    message: "You are free to reset your password"
+                })
             }
         })
         .catch(err => {
             console.log(err.message);
-            console.log(req.body.Telephone)
-            return res.status(401).json({ message: 'Invalid code' })
+            return res.status(401).json({
+                success:false,
+                message: 'Invalid code'
+            })
         })
 }
 //resetting password after verifying code
@@ -290,6 +296,7 @@ exports.loginClient = async (req, res, next) => {
         } = req.body
         //validating email
         if (!Telephone || !Password) return res.status(401).json({
+            success:false,
             message: "Telephone and password are required"
         })
         const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
@@ -303,6 +310,7 @@ exports.loginClient = async (req, res, next) => {
             //checking if client is verified
             else if (result.rows[0].verified !== true) {
                 return res.status(400).json({
+                    success:false,
                     message: "Please verify your phone number first"
                 })
             } else {
@@ -324,6 +332,7 @@ exports.loginClient = async (req, res, next) => {
                     };
                     // res.status(200).cookie('token', token, options).redirect('https://bookinga.netlify.app/dashboard')
                     res.status(200).cookie('token', token, options).json({
+                        success:true,
                         message: "logged in successfully",
                         token
                     })
@@ -399,6 +408,7 @@ exports.updatePassword = async (req, res) => {
                     const passMatch = await bcrypt.compare(currentPassword, result.rows[0].password);
                     if (!passMatch) {
                         return res.status(401).json({
+                            success:false,
                             message: `current password is incorrect`
                         })
                     } else {
@@ -408,6 +418,7 @@ exports.updatePassword = async (req, res) => {
                         client.query(`UPDATE clients set password='${hash}' WHERE clientid='${req.user[0].clientid}'`, (error, result) => {
                             if (error) console.log(error.message)
                             return res.status(200).json({
+                                success:true,
                                 message: "password updated"
                             })
                         });
