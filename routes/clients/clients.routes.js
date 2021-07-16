@@ -173,7 +173,7 @@ routers.route('/login')
 routers.route("/forgotPassword")
     /**
      * @swagger
-     * /api/v1/client/forgotpassword:
+     * /api/v1/client/forgotPassword:
      *   post:
      *     tags:
      *       - Client

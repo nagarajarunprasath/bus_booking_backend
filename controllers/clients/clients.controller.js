@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 dotenv.config();
 const twilio = require('twilio')(process.env.accountSid, process.env.authToken, {
-    lazyLoading:true
+    lazyLoading: true
 });
 const {
     v4: uuidv4
@@ -70,7 +70,9 @@ exports.postingClient = async (req, res) => {
                     })
                     .catch(err => {
                         console.log(err.message);
-                        return res.status(500).json({ err });
+                        return res.status(500).json({
+                            err
+                        });
                     })
             }
         })
@@ -121,7 +123,7 @@ exports.checkingPhone = async (req, res) => {
                                     httpOnly: true,
                                 };
                                 res.status(200).cookie('token', token, options).json({
-                                    success:true,
+                                    success: true,
                                     message: "Registered successfully",
                                     token
                                 })
@@ -132,13 +134,12 @@ exports.checkingPhone = async (req, res) => {
                 .catch(err => {
                     console.log(err.message);
                     return res.status(400).json({
-                        success:false,
+                        success: false,
                         message: "incorect code"
                     });
                 })
         }
-    }
-    catch (error) {
+    } catch (error) {
         console.log(error)
     }
 }
@@ -157,8 +158,7 @@ exports.forgotPassword = async (req, res, next) => {
                 success: false,
                 message: "No user with such  telephone number"
             }).status(404);
-        }
-    else {
+        } else {
             twilio
                 .verify
                 .services(process.env.serviceID)
@@ -183,21 +183,28 @@ exports.forgotPassword = async (req, res, next) => {
 }
 //checking if code provided is valid before pass reset
 exports.verifyResetPassCode = (req, res) => {
+    const {
+        Telephone,
+        code
+    } = req.body
+    if(!code) return res.status(400).json({message:"code is required"})
+    const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
+    if (!Telephone.match(Phonepattern)) return res.status(400).json("invalid telephone number")
     twilio
         .verify
         .services(process.env.serviceId)
         .verificationChecks
         .create({
-            to: req.body.Telephone,
-            code: req.body.code
+            to: Telephone,
+            code
         })
         .then((data) => {
-            if(data.status === "pending")  return res.status(401).json({
-                message:"Incorect code"
+            if (data.status === "pending") return res.status(401).json({
+                message: "Incorect code"
             })
             else {
                 return res.status(200).json({
-                    success:true,
+                    success: true,
                     message: "You are free to reset your password"
                 })
             }
@@ -205,7 +212,7 @@ exports.verifyResetPassCode = (req, res) => {
         .catch(err => {
             console.log(err.message);
             return res.status(401).json({
-                success:false,
+                success: false,
                 message: 'Invalid code'
             })
         })
@@ -296,7 +303,7 @@ exports.loginClient = async (req, res, next) => {
         } = req.body
         //validating email
         if (!Telephone || !Password) return res.status(401).json({
-            success:false,
+            success: false,
             message: "Telephone and password are required"
         })
         const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
@@ -310,7 +317,7 @@ exports.loginClient = async (req, res, next) => {
             //checking if client is verified
             else if (result.rows[0].verified !== true) {
                 return res.status(400).json({
-                    success:false,
+                    success: false,
                     message: "Please verify your phone number first"
                 })
             } else {
@@ -332,7 +339,7 @@ exports.loginClient = async (req, res, next) => {
                     };
                     // res.status(200).cookie('token', token, options).redirect('https://bookinga.netlify.app/dashboard')
                     res.status(200).cookie('token', token, options).json({
-                        success:true,
+                        success: true,
                         message: "logged in successfully",
                         token
                     })
@@ -408,7 +415,7 @@ exports.updatePassword = async (req, res) => {
                     const passMatch = await bcrypt.compare(currentPassword, result.rows[0].password);
                     if (!passMatch) {
                         return res.status(401).json({
-                            success:false,
+                            success: false,
                             message: `current password is incorrect`
                         })
                     } else {
@@ -418,7 +425,7 @@ exports.updatePassword = async (req, res) => {
                         client.query(`UPDATE clients set password='${hash}' WHERE clientid='${req.user[0].clientid}'`, (error, result) => {
                             if (error) console.log(error.message)
                             return res.status(200).json({
-                                success:true,
+                                success: true,
                                 message: "password updated"
                             })
                         });
