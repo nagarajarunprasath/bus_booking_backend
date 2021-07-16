@@ -112,6 +112,7 @@ exports.checkingPhone = async (req, res) => {
                         client.query(`SELECT * FROM clients where telephone='${phoneNumber}'`, async (error, result) => {
                             if (error) console.log(error)
                             else {
+                                console.log(result.rows[0].clientid)
                                 //generating token
                                 const token = jwt.sign({
                                     id: result.rows[0].clientid
@@ -273,7 +274,7 @@ exports.updateClient = async (req, res, next) => {
                 if (!Telephone.match(Phonepattern)) return res.json("Invalid telephone number")
                 if (Firstname.length < 3 || Lastname.length < 3) return res.status(400).json("Both Firstname and lastname must be at least 3 characters long");
                 if (Firstname.length > 30 || Lastname.length > 30) return res.status(400).json("Both Firstname and lastname must be less than 30 characters long")
-                await client.query(`UPDATE clients set firstname='${Firstname}',lastname='${Lastname}',telephone='${Telephone}' where clientId='${req.user[0].clientid}'`, (err, resp) => {
+                await client.query(`UPDATE clients set firstname='${Firstname}',lastname='${Lastname}',telephone='${Telephone}' where clientid='${req.user[0].clientid}'`, (err, resp) => {
                     if (err) {
                         console.log(err)
                         return res.json({
