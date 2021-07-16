@@ -161,7 +161,7 @@ exports.forgotPassword = async (req, res, next) => {
         } else {
             twilio
                 .verify
-                .services(process.env.serviceID)
+                .services(process.env.serviceId)
                 .verifications
                 .create({
                     to: Telephone,
