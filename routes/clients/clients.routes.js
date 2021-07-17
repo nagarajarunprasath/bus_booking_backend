@@ -40,7 +40,7 @@ routers.route("/resetPassword")
      *       200:
      *         description: We have updated your password
      */
-    .put(protect,resetPasssword)
+    .put(resetPasssword)
 routers.route("/")
     /**
      * @swagger

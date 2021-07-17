@@ -222,12 +222,18 @@ exports.verifyResetPassCode = (req, res) => {
 exports.resetPasssword = async (req, res, next) => {
     const {
         password,
-        confirmPassword
+        confirmPassword,
+        Telephone
     } = req.body;
     try {
+        const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
+        if (!Telephone) return res.status(400).json({
+            message: "First provide phone number and verify it."
+        })
         if (!password || !confirmPassword) return res.status(400).json({
             message: "All fields are required"
         })
+    if (!Telephone.match(Phonepattern)) return res.status(400).json("invalid telephone number")
         if (password.length < 6) return res.status(400).json({
             message: "Password must be at least 6 characters long"
         })
@@ -236,11 +242,11 @@ exports.resetPasssword = async (req, res, next) => {
         })
         const salt = 10;
         const hash = await bcrypt.hash(password, salt)
-        client.query(`update clients set password='${hash}' where telephone='${req.body.Telephone}'`, (err, result) => {
-            if (err) return res.json({
+        client.query(`update clients set password='${hash}' where telephone='${Telephone}'`, (err, result) => {
+            if (err) return res.status(400).json({
                 success: false,
                 message: err.message
-            }).status(400)
+            })
             return res.json({
                 success: true,
                 message: "password updated succesfully"
