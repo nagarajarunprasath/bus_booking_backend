@@ -41,18 +41,39 @@ exports.postingClient = async (req, res) => {
             confirmPassword
         } = req.body
         const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
-        if (!Firstname || !Lastname || !Password || !confirmPassword || !Gender || !Telephone) return res.status(400).json("All fieds must be filled");
-        if (!Telephone.match(Phonepattern)) return res.json("Invalid telephone number")
-        if (Firstname.length < 3 || Lastname.length < 3) return res.status(400).json("Both Firstname and lastname must be at least 3 characters long");
-        if (Firstname.length > 30 || Lastname.length > 30) return res.status(400).json("Both Firstname and lastname must be less than 30 characters long");
-        if (Password !== confirmPassword) return res.status(400).json("Password must match");
-        if (Gender !== 'M' && Gender !== 'F') return res.status(400).json("Gender must be M or F");
+        if (!Firstname || !Lastname || !Password || !confirmPassword || !Gender || !Telephone) return res.status(400).json({
+            success: false,
+            message: "All fieds must be filled"
+        });
+        if (!Telephone.match(Phonepattern)) return res.json({
+            success: false,
+            message: "Invalid telephone number"
+        })
+        if (Firstname.length < 3 || Lastname.length < 3) return res.status(400).json({
+            success: false,
+            message: "Both Firstname and lastname must be at least 3 characters long"
+        });
+        if (Firstname.length > 30 || Lastname.length > 30) return res.status(400).json({
+            success: false,
+            message: "Both Firstname and lastname must be less than 30 characters long"
+        });
+        if (Password !== confirmPassword) return res.status(400).json({
+            success: false,
+            message: "Password must match"
+        });
+        if (Gender !== 'M' && Gender !== 'F') return res.status(400).json({
+            success: false,
+            message: "Gender must be M or F"
+        });
         const salt = 10;
         const hashedPass = await bcrypt.hash(`${Password}`, salt);
         const query = `INSERT INTO clients(clientid,firstname,lastname,telephone,gender,password) VALUES('${id}','${Firstname}','${Lastname}','${Telephone}','${Gender}','${hashedPass}')`
         client.query(`${query}`, (error, result) => {
             if (error) {
-                return res.status(400).json('Telephone alread exist');
+                return res.status(400).json({
+                    success: false,
+                    message: 'Telephone alread exist'
+                });
             } else {
                 twilio
                     .verify
@@ -89,10 +110,12 @@ exports.checkingPhone = async (req, res) => {
         } = req.body;
         const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
         if (!phoneNumber || !code) return res.status(400).json({
+            success: false,
             message: "Phone number and code are required"
         });
         if (!phoneNumber.match(Phonepattern)) return res.json("invalid telephone number")
         if (code.length !== 6) return res.status(400).json({
+            success: false,
             message: "Code must be 6 characters long"
         });
         else {
@@ -136,7 +159,7 @@ exports.checkingPhone = async (req, res) => {
                     console.log(err.message);
                     return res.status(400).json({
                         success: false,
-                        message: "incorect code"
+                        message: "Incorect code"
                     });
                 })
         }
@@ -188,9 +211,16 @@ exports.verifyResetPassCode = (req, res) => {
         Telephone,
         code
     } = req.body
-    if(!code) return res.status(400).json({message:"code is required"})
     const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
-    if (!Telephone.match(Phonepattern)) return res.status(400).json("invalid telephone number")
+    if (!Telephone) return res.status(400).json({
+        success: false,
+        message: "Provide phone number."
+    })
+    if (!Telephone.match(Phonepattern)) return res.status(400).json("Invalid telephone number")
+    if (!code) return res.status(400).json({
+        success: false,
+        message: "Code is required"
+    })
     twilio
         .verify
         .services(process.env.serviceId)
@@ -201,6 +231,7 @@ exports.verifyResetPassCode = (req, res) => {
         })
         .then((data) => {
             if (data.status === "pending") return res.status(401).json({
+                success: false,
                 message: "Incorect code"
             })
             else {
@@ -228,16 +259,20 @@ exports.resetPasssword = async (req, res, next) => {
     try {
         const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
         if (!Telephone) return res.status(400).json({
+            success: false,
             message: "First provide phone number and verify it."
         })
         if (!password || !confirmPassword) return res.status(400).json({
+            success: false,
             message: "All fields are required"
         })
-    if (!Telephone.match(Phonepattern)) return res.status(400).json("invalid telephone number")
+        if (!Telephone.match(Phonepattern)) return res.status(400).json("invalid telephone number")
         if (password.length < 6) return res.status(400).json({
+            success: false,
             message: "Password must be at least 6 characters long"
         })
         if (password !== confirmPassword) return res.status(400).json({
+            success: false,
             message: "password must match"
         })
         const salt = 10;
@@ -254,7 +289,10 @@ exports.resetPasssword = async (req, res, next) => {
         })
     } catch (error) {
         console.log(error);
-        return res.status(500).json("Server error")
+        return res.status(500).json({
+            success: false,
+            message: "Server error"
+        })
     }
 }
 //@desc update your info
@@ -267,6 +305,7 @@ exports.updateClient = async (req, res, next) => {
         client.query(`${query}`, async (err, result) => {
             if (err) console.log(err);
             else if (result.rows.length < 1) return res.status(404).json({
+                success:false,
                 message: 'User not found'
             });
             else {
@@ -277,9 +316,18 @@ exports.updateClient = async (req, res, next) => {
                 } = req.body
                 //validating before updating
                 const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
-                if (!Telephone.match(Phonepattern)) return res.json("Invalid telephone number")
-                if (Firstname.length < 3 || Lastname.length < 3) return res.status(400).json("Both Firstname and lastname must be at least 3 characters long");
-                if (Firstname.length > 30 || Lastname.length > 30) return res.status(400).json("Both Firstname and lastname must be less than 30 characters long")
+                if (!Telephone.match(Phonepattern)) return res.json({
+                    success: false,
+                    message: "Invalid telephone number"
+                })
+                if (Firstname.length < 3 || Lastname.length < 3) return res.status(400).json({
+                    success: false,
+                    message: "Both Firstname and lastname must be at least 3 characters long"
+                });
+                if (Firstname.length > 30 || Lastname.length > 30) return res.status(400).json({
+                    success: false,
+                    message: "Both Firstname and lastname must be less than 30 characters long"
+                })
                 await client.query(`UPDATE clients set firstname='${Firstname}',lastname='${Lastname}',telephone='${Telephone}' where clientid='${req.user[0].clientid}'`, (err, resp) => {
                     if (err) {
                         console.log(err)
@@ -314,11 +362,15 @@ exports.loginClient = async (req, res, next) => {
             message: "Telephone and password are required"
         })
         const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
-        if (!Telephone.match(Phonepattern)) return res.status(400).json("invalid telephone number")
+        if (!Telephone.match(Phonepattern)) return res.status(400).json({
+            success: false,
+            message: "Invalid telephone number"
+        })
         //finding if user exists
         client.query(`SELECT * FROM clients where telephone='${Telephone}'`, async (error, result) => {
             if (error) console.log(error.message);
             else if (result.rows.length == 0) return res.status(400).json({
+                success: false,
                 message: "Invalid phone number or password"
             });
             //checking if client is verified
@@ -331,6 +383,7 @@ exports.loginClient = async (req, res, next) => {
                 //comparingPassword
                 const passMatch = await bcrypt.compare(Password, result.rows[0].password)
                 if (!passMatch) return res.status(401).json({
+                    success: false,
                     message: "Invalid phone number or password"
                 });
                 else {
@@ -347,7 +400,7 @@ exports.loginClient = async (req, res, next) => {
                     // res.status(200).cookie('token', token, options).redirect('https://bookinga.netlify.app/dashboard')
                     res.status(200).cookie('token', token, options).json({
                         success: true,
-                        message: "logged in successfully",
+                        message: "Logged in successfully",
                         token
                     })
                 }
@@ -366,6 +419,7 @@ exports.deleteClient = async (req, res, next) => {
         client.query(`${query}`, async (err, result) => {
             if (err) console.log(err);
             else if (result.rows.length < 1) return res.status(404).json({
+                success:false,
                 message: 'User not found'
             });
             else {
@@ -405,17 +459,21 @@ exports.updatePassword = async (req, res) => {
             else {
                 if (result.rows.length == 0) {
                     return res.status(404).json({
+                        success:false,
                         message: `user with id: ${req.user[0].id} not found`
                     })
                 } else {
                     if (newPassword.length < 6) return res.json({
+                        success:false,
                         message: "password must be at least 6 characters"
                     })
                     if (!currentPassword || !newPassword || !confirmPassword) return res.status(400).json({
+                        success:false,
                         message: "currrent password, newPassword and confirm password are required"
                     })
                     //checking if new password===confirm password
                     if (newPassword !== confirmPassword) return res.json({
+                        success:false,
                         message: "new password and confirm password must match"
                     })
                     //checking if current password is correct
@@ -455,20 +513,24 @@ exports.clientPhotoUpload = async (req, res) => {
             else {
                 if (result.rows.length == 0) {
                     return res.status(404).json({
+                        success:false,
                         message: `user with id: ${req.user[0].clientid} not found`
                     })
                 } else {
                     if (!req.files) return res.status(400).send({
+                        success:false,
                         message: "Please upload a photo"
                     });
                     else {
                         const file = req.files.photo;
                         //make sure that uploaded file is an image
                         if (!file.mimetype.startsWith("image")) return res.status(400).send({
+                            success: false,
                             message: "please upload an image file"
                         });
                         //checking photo size
                         if (file.size > process.env.MAX_FILE_SIZE) return res.status(400).send({
+                            success: false,
                             message: `please upload an image less than ${process.env.MAX_FILE_SIZE}`
                         });
                         //customizing image name to avoid overwriting
@@ -478,6 +540,7 @@ exports.clientPhotoUpload = async (req, res) => {
                             if (err) {
                                 console.log(err);
                                 return res.status(400).send({
+                                    success: false,
                                     message: "Problem with image upload"
                                 });
                             }
