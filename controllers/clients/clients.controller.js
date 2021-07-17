@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
-const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
+const path = require("path");
 dotenv.config();
 const twilio = require('twilio')(process.env.accountSid, process.env.authToken, {
     lazyLoading: true
@@ -452,12 +452,11 @@ exports.clientPhotoUpload = async (req, res) => {
                         message: `user with id: ${req.user[0].clientid} not found`
                     })
                 } else {
-                    console.log(req.files);
                     if (!req.files) return res.status(400).send({
                         message: "Please upload a photo"
                     });
                     else {
-                        const file = req.files.file;
+                        const file = req.files.photo;
                         //make sure that uploaded file is an image
                         if (!file.mimetype.startsWith("image")) return res.status(400).send({
                             message: "please upload an image file"

@@ -250,7 +250,7 @@ routers.route("/forgotPassword")
          *     consumes:
          *       - multipart/form-data
          *     parameters:
-         *       - name: Photo
+         *       - name: photo
          *         description: Upload a photo
          *         in: formData
          *         type: file
