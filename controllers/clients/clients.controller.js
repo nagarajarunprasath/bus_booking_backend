@@ -319,7 +319,7 @@ exports.loginClient = async (req, res, next) => {
         client.query(`SELECT * FROM clients where telephone='${Telephone}'`, async (error, result) => {
             if (error) console.log(error.message);
             else if (result.rows.length == 0) return res.status(400).json({
-                message: "Incorect phone number"
+                message: "Invalid phone number or password"
             });
             //checking if client is verified
             else if (result.rows[0].verified !== true) {
@@ -331,7 +331,7 @@ exports.loginClient = async (req, res, next) => {
                 //comparingPassword
                 const passMatch = await bcrypt.compare(Password, result.rows[0].password)
                 if (!passMatch) return res.status(401).json({
-                    message: "Incorrect password"
+                    message: "Invalid phone number or password"
                 });
                 else {
                     //generating token
