@@ -12,6 +12,9 @@ const {
 const {
     client
 } = require('../../models/database');
+const {
+    exit
+} = require('process');
 exports.gettingClients = (req, res) => {
     try {
         client.query('SELECT * FROM clients', (err, result) => {
@@ -67,14 +70,18 @@ exports.postingClient = async (req, res) => {
         });
         const salt = 10;
         const hashedPass = await bcrypt.hash(`${Password}`, salt);
-        const query = `INSERT INTO clients(clientid,firstname,lastname,telephone,gender,password) VALUES('${id}','${Firstname}','${Lastname}','${Telephone}','${Gender}','${hashedPass}')`
-        client.query(`${query}`, (error, result) => {
-            if (error) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Telephone alread exist'
-                });
-            } else {
+        //finging if phone already registered
+        client.query(`SELECT * FROM clients WHERE telephone='${Telephone}'`, (error, result) => {
+            if (error) console.log(error)
+            if (result.rows.length > 0) return res.status(400).json({
+                success: false,
+                message: 'Telephone alread registered'
+            });
+            if (!Telephone.startsWith("+")) return res.status(400).json({
+                success: false,
+                message: "Include country code in phone number."
+            })
+            else {
                 twilio
                     .verify
                     .services(process.env.serviceId)
@@ -84,21 +91,69 @@ exports.postingClient = async (req, res) => {
                         channel: 'sms'
                     })
                     .then(() => {
-                        return res.status(201).json({
-                            success: true,
-                            message: `Please help us to know that the phone number provided belongs to you by entering code sent to: ${Telephone}`
-                        })
+                            const query = `INSERT INTO clients(clientid,firstname,lastname,telephone,gender,password) VALUES('${id}','${Firstname}','${Lastname}','${Telephone}','${Gender}','${hashedPass}')`
+                            client.query(`${query}`, (error, result) => {
+                                if(error) console.log(error.message)
+                                return res.status(201).json({
+                                    success: true,
+                                    message: `Please help us to know that the phone number provided belongs to you by entering code sent to: ${Telephone}`
+                                })
+                            })
                     })
                     .catch(err => {
                         console.log(err.message);
-                        return res.status(500).json({
-                            err
-                        });
+                        if (err.errno === -3008) {   
+                            return res.status(500).json({
+                                success: false,
+                                message:"Connect to internet"
+                            });
+                        }
                     })
             }
         })
     } catch (error) {
         console.log(error)
+    }
+}
+//resend code controller
+exports.resendCode = async (req, res) => {
+     const Phonepattern = /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/
+    if (!req.body.Telephone) return res.status(400).json({
+        success: false,
+        message: "Phone number is required"
+    });
+    if (!req.body.Telephone.match(Phonepattern)) return res.json({
+          success: false,
+          message: "Invalid telephone number"
+      })
+    if (!req.body.Telephone.startsWith("+")) return res.status(400).json({
+        success: false,
+        message: "Include country code in phone number."
+    })
+    else {
+        twilio
+            .verify
+            .services(process.env.serviceId)
+            .verifications
+            .create({
+                to: req.body.Telephone,
+                channel: 'sms'
+            })
+            .then(() => {
+                return res.status(201).json({
+                    success: true,
+                    message: `Code resent to: ${req.body.Telephone}`
+                })
+            })
+            .catch(err => {
+                console.log(err.message);
+                if (err.errno === -3008) {
+                    return res.status(500).json({
+                        success: false,
+                        message: "Connect to internet"
+                    });
+                }
+            })
     }
 }
 //verify phone number after sign up
@@ -305,7 +360,7 @@ exports.updateClient = async (req, res, next) => {
         client.query(`${query}`, async (err, result) => {
             if (err) console.log(err);
             else if (result.rows.length < 1) return res.status(404).json({
-                success:false,
+                success: false,
                 message: 'User not found'
             });
             else {
@@ -419,7 +474,7 @@ exports.deleteClient = async (req, res, next) => {
         client.query(`${query}`, async (err, result) => {
             if (err) console.log(err);
             else if (result.rows.length < 1) return res.status(404).json({
-                success:false,
+                success: false,
                 message: 'User not found'
             });
             else {
@@ -459,21 +514,21 @@ exports.updatePassword = async (req, res) => {
             else {
                 if (result.rows.length == 0) {
                     return res.status(404).json({
-                        success:false,
+                        success: false,
                         message: `user with id: ${req.user[0].id} not found`
                     })
                 } else {
                     if (newPassword.length < 6) return res.json({
-                        success:false,
+                        success: false,
                         message: "password must be at least 6 characters"
                     })
                     if (!currentPassword || !newPassword || !confirmPassword) return res.status(400).json({
-                        success:false,
+                        success: false,
                         message: "currrent password, newPassword and confirm password are required"
                     })
                     //checking if new password===confirm password
                     if (newPassword !== confirmPassword) return res.json({
-                        success:false,
+                        success: false,
                         message: "new password and confirm password must match"
                     })
                     //checking if current password is correct
@@ -513,12 +568,12 @@ exports.clientPhotoUpload = async (req, res) => {
             else {
                 if (result.rows.length == 0) {
                     return res.status(404).json({
-                        success:false,
+                        success: false,
                         message: `user with id: ${req.user[0].clientid} not found`
                     })
                 } else {
                     if (!req.files) return res.status(400).send({
-                        success:false,
+                        success: false,
                         message: "Please upload a photo"
                     });
                     else {
